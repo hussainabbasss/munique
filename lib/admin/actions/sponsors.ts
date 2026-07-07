@@ -107,15 +107,19 @@ export async function deleteSponsorAction(sponsorId: string) {
   await requireAdminUser();
   const supabase = await createClient();
 
-  const { data } = await supabase
+  const { data: sponsor } = await supabase
     .from("sponsors")
-    .select("logo_path")
+    .select("logo_path, is_permanent, name")
     .eq("id", sponsorId)
     .single();
 
-  if (data?.logo_path) {
+  if (sponsor?.is_permanent) {
+    return { error: "Permanent sponsors cannot be removed." };
+  }
+
+  if (sponsor?.logo_path) {
     const service = createServiceClient();
-    await service?.storage.from("sponsor-logos").remove([data.logo_path]);
+    await service?.storage.from("sponsor-logos").remove([sponsor.logo_path]);
   }
 
   await supabase.from("sponsors").delete().eq("id", sponsorId);

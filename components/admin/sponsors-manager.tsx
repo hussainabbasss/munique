@@ -172,7 +172,14 @@ export function SponsorsManager({ sponsors, logoUrls }: Props) {
                       "—"
                     )}
                   </td>
-                  <td>{s.name}</td>
+                  <td>
+                    {s.name}
+                    {s.is_permanent && (
+                      <span className="admin-badge admin-badge-permanent">
+                        Permanent
+                      </span>
+                    )}
+                  </td>
                   <td style={{ textTransform: "capitalize" }}>{s.tier}</td>
                   <td>
                     <button
@@ -185,13 +192,15 @@ export function SponsorsManager({ sponsors, logoUrls }: Props) {
                     >
                       Edit
                     </button>{" "}
-                    <button
-                      type="button"
-                      className="btn-admin-secondary btn-admin-danger"
-                      onClick={() => deleteSponsorAction(s.id)}
-                    >
-                      Del
-                    </button>
+                    {!s.is_permanent && (
+                      <button
+                        type="button"
+                        className="btn-admin-secondary btn-admin-danger"
+                        onClick={() => deleteSponsorAction(s.id)}
+                      >
+                        Del
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

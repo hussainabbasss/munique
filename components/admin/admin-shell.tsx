@@ -83,6 +83,14 @@ export function AdminShell({ adminEmail, adminRole, children }: Props) {
               Sign out
             </button>
           </form>
+          <div className="admin-sidebar-partner">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/system-summit.png"
+              alt="System Summit"
+              className="admin-sidebar-partner-logo"
+            />
+          </div>
         </div>
       </aside>
 
@@ -103,6 +111,13 @@ export function AdminShell({ adminEmail, adminRole, children }: Props) {
         </header>
 
         <main className="admin-main">{children}</main>
+
+        <footer className="admin-shell-footer">
+          <p className="admin-shell-footer-copy">
+            Need a website for your conference?{" "}
+            <span className="admin-shell-footer-cta">Contact now</span>
+          </p>
+        </footer>
       </div>
     </div>
   );

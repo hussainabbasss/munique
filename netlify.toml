@@ -1,0 +1,7 @@
+[build]
+  command = "npm run build"
+
+# Next.js embeds NEXT_PUBLIC_* vars in client and edge bundles by design.
+# They are not confidential — only the service role key must stay secret.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY"

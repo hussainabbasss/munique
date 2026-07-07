@@ -2,10 +2,8 @@ import { ConferenceFacts } from "@/components/conference-facts";
 import { ExploreGrid } from "@/components/explore-grid";
 import { Hero } from "@/components/hero";
 import { SecretariatPreview } from "@/components/secretariat-portrait";
-import {
-  fetchPublishedSponsors,
-  getPublicStorageUrl,
-} from "@/lib/public/queries";
+import { SponsorCard } from "@/components/sponsor-card";
+import { fetchPublishedSponsors } from "@/lib/public/queries";
 
 const sponsorPlaceholders = [
   "Partner I",
@@ -40,40 +38,7 @@ export default async function Home() {
 
           <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {sponsors.length > 0
-              ? sponsors.map((s) => {
-                  const logoUrl = s.logo_path
-                    ? getPublicStorageUrl("sponsor-logos", s.logo_path)
-                    : null;
-
-                  const inner = logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={logoUrl}
-                      alt={s.name}
-                      className="max-h-12 max-w-full object-contain"
-                    />
-                  ) : (
-                    <span className="font-mono text-[0.6875rem] uppercase tracking-widest text-ink-navy-soft">
-                      {s.name}
-                    </span>
-                  );
-
-                  return s.website_url ? (
-                    <a
-                      key={s.id}
-                      href={s.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="sponsor-slot"
-                    >
-                      {inner}
-                    </a>
-                  ) : (
-                    <div key={s.id} className="sponsor-slot">
-                      {inner}
-                    </div>
-                  );
-                })
+              ? sponsors.map((s) => <SponsorCard key={s.id} sponsor={s} />)
               : sponsorPlaceholders.map((name) => (
                   <div
                     key={name}

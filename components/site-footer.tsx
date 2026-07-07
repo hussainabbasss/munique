@@ -29,6 +29,11 @@ export function SiteFooter() {
           <PartnerSeal />
         </div>
 
+        <p className="site-footer-pitch">
+          Need a website for your conference?{" "}
+          <span className="site-footer-pitch-cta">Contact now</span>
+        </p>
+
         <p className="site-footer-copy">© Munique 2026 · Edition I</p>
       </div>
     </footer>

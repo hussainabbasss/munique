@@ -53,6 +53,7 @@ export type Sponsor = {
   display_order: number;
   is_published: boolean;
   is_digital_partner: boolean;
+  is_permanent: boolean;
   created_at: string;
 };
 
