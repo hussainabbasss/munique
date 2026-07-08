@@ -115,7 +115,14 @@ export function AdminShell({ adminEmail, adminRole, children }: Props) {
         <footer className="admin-shell-footer">
           <p className="admin-shell-footer-copy">
             Need a website for your conference?{" "}
-            <span className="admin-shell-footer-cta">Contact now</span>
+            <a
+              href="https://systemsummit.online"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="admin-shell-footer-cta"
+            >
+              Contact now
+            </a>
           </p>
         </footer>
       </div>

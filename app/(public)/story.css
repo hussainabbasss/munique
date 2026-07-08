@@ -1,0 +1,451 @@
+/* ═══════════════════════════════════════════════════════════════
+   STORY cluster — about · contact · privacy
+   Class prefix: story-
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Shared band rhythm ── */
+
+.story-band {
+  padding-block: clamp(4rem, 10vw, 7rem);
+}
+
+.story-band-ink {
+  background: var(--ink);
+  color: var(--on-dark);
+}
+
+.story-band-cobalt {
+  background: var(--cobalt);
+  color: var(--on-dark);
+}
+
+.story-back {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 2.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  transition: color var(--dur-fast) var(--ease-swift);
+}
+
+.story-back:hover {
+  color: var(--ink);
+}
+
+/* ── About: monumental statement (paper band) ── */
+
+.story-statement-title {
+  margin: 0;
+  max-width: 16ch;
+}
+
+.story-statement-lede {
+  margin: 1.75rem 0 0;
+}
+
+/* ── About: credo (ink band, seal faint behind) ── */
+
+.story-credo {
+  position: relative;
+  overflow: hidden;
+}
+
+.story-credo-seal {
+  position: absolute;
+  top: 50%;
+  right: clamp(-9rem, -14vw, -3rem);
+  width: clamp(20rem, 46vw, 34rem);
+  height: auto;
+  transform: translateY(-50%);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.story-credo-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.story-credo-label {
+  margin: 0 0 1.25rem;
+}
+
+.story-credo-title {
+  margin: 0;
+  max-width: 14ch;
+}
+
+.story-credo-copy {
+  margin: 1.75rem 0 0;
+  max-width: 52ch;
+  font-size: clamp(1.0625rem, 1.6vw, 1.1875rem);
+  line-height: 1.65;
+  color: var(--on-dark-dim);
+  text-wrap: pretty;
+}
+
+/* ── About: Edition I specifics (cobalt band) ── */
+
+.story-edition {
+  display: grid;
+  gap: 2.5rem;
+}
+
+@media (min-width: 48rem) {
+  .story-edition {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    gap: 3.5rem;
+  }
+}
+
+.story-edition-title {
+  margin: 0;
+}
+
+.story-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.story-spec {
+  margin: 0;
+  border-top: 1px solid var(--line-dark);
+}
+
+.story-spec-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 2rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--line-dark);
+}
+
+.story-spec-key {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-dark-dim);
+}
+
+.story-spec-val {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--on-dark);
+}
+
+.story-spec-val a {
+  color: inherit;
+}
+
+/* ── About: closing register band (paper) ── */
+
+.story-close-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.story-close-title {
+  margin: 0;
+}
+
+.story-close-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem 2.25rem;
+}
+
+/* ── Contact: split composition ── */
+
+.story-contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 64rem) {
+  .story-contact {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.story-contact-brief {
+  background: var(--cobalt);
+  color: var(--on-dark);
+  padding: clamp(3.5rem, 8vw, 5.5rem) var(--gutter) clamp(3rem, 6vw, 4.5rem);
+}
+
+.story-contact-desk {
+  padding: clamp(2.75rem, 6vw, 4.5rem) var(--gutter) clamp(4rem, 8vw, 6rem);
+}
+
+@media (min-width: 64rem) {
+  .story-contact-brief {
+    padding-left: max(var(--gutter), calc((100vw - 84rem) / 2 + var(--gutter)));
+    padding-right: clamp(2.5rem, 4vw, 4rem);
+  }
+
+  .story-contact-desk {
+    padding-top: clamp(3.5rem, 8vw, 5.5rem);
+    padding-left: clamp(2.5rem, 4vw, 4rem);
+    padding-right: max(var(--gutter), calc((100vw - 84rem) / 2 + var(--gutter)));
+  }
+
+  .story-contact-brief-inner {
+    max-width: 34rem;
+    margin-left: auto;
+  }
+
+  .story-contact-desk-inner {
+    max-width: 38rem;
+  }
+}
+
+.story-contact-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  margin: 0 0 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--line-dark);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-dark-dim);
+}
+
+.story-contact-title {
+  margin: 0;
+}
+
+.story-contact-guide {
+  margin: 1.5rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-dark-dim);
+}
+
+.story-contact-note {
+  margin: 1rem 0 0;
+  max-width: 44ch;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--on-dark-dim);
+  text-wrap: pretty;
+}
+
+/* Channels — dark edition of the ledger vocabulary */
+
+.story-channels-label {
+  margin: 3rem 0 0.875rem;
+}
+
+.story-channels.ledger {
+  border-top-color: var(--line-dark);
+}
+
+.story-channels .ledger-row {
+  border-bottom-color: var(--line-dark);
+}
+
+.story-channels .ledger-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.875rem 0.25rem;
+  min-height: 2.75rem;
+}
+
+.story-channels .ledger-link:hover {
+  background: color-mix(in oklab, var(--on-dark) 10%, transparent);
+}
+
+.story-channel-key {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-dark-dim);
+}
+
+.story-channel-val {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--on-dark);
+}
+
+/* ── Contact: the procedural form desk ── */
+
+.story-desk-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.story-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.375rem;
+}
+
+.story-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.story-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.story-input,
+.story-textarea {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: var(--paper);
+  padding: 0.6875rem 0.875rem;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ink);
+  transition: border-color var(--dur-fast) var(--ease-swift);
+}
+
+.story-input {
+  min-height: 3rem;
+}
+
+.story-textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.story-input::placeholder,
+.story-textarea::placeholder {
+  color: var(--ink-2);
+}
+
+.story-input:hover,
+.story-textarea:hover {
+  border-color: var(--ink);
+}
+
+.story-input:focus,
+.story-textarea:focus {
+  outline: 2px solid var(--cobalt);
+  outline-offset: 0;
+  border-color: var(--cobalt);
+}
+
+.story-input-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.story-form-error {
+  margin: 0;
+  border: 1px solid var(--status-error);
+  padding: 0.75rem 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: var(--status-error);
+}
+
+.story-form-success {
+  border: 1px solid var(--status-confirmed);
+  padding: 1.5rem;
+}
+
+.story-form-success-label {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--status-confirmed);
+}
+
+.story-form-success-text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.story-submit {
+  align-self: flex-start;
+  min-width: 12rem;
+}
+
+.story-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Privacy: typeset document ── */
+
+.story-hall-compact .hall-inner {
+  padding: clamp(2.75rem, 6vw, 4rem) var(--gutter) clamp(1.75rem, 4vw, 2.5rem);
+  gap: 1rem;
+}
+
+.story-doc {
+  max-width: 68ch;
+  padding-block: clamp(3rem, 7vw, 5rem) clamp(4rem, 8vw, 6rem);
+}
+
+.story-doc-updated {
+  margin: 0;
+}
+
+.story-doc-h2 {
+  margin: 2.5rem 0 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line-strong);
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 2.4vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.story-doc .prose-body + .prose-body {
+  margin-top: 1rem;
+}

@@ -1,21 +1,42 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import "../story.css";
+
+export const metadata: Metadata = {
+  title: "Privacy — Munique 2026",
+  description: "Privacy policy for the Munique 2026 conference.",
+};
 
 export default function PrivacyPage() {
   return (
-    <main id="main" className="mx-auto max-w-[65ch] px-6 py-16">
-      <h1 className="font-display text-[clamp(1.75rem,3vw,2.625rem)] font-semibold text-ink-navy text-balance">
-        Privacy
-      </h1>
-      <p className="mt-4 text-base leading-relaxed text-ink-navy-soft text-pretty">
-        Privacy policy stub — full policy will be published before registration
-        data collection begins.
-      </p>
-      <Link
-        href="/"
-        className="mt-8 inline-block text-sm font-semibold text-ink-navy no-underline hover:underline"
-      >
-        ← Back to homepage
-      </Link>
+    <main id="main">
+      {/* ── Compact hall band ── */}
+      <section className="hall story-hall-compact">
+        <div className="hall-inner">
+          <div className="hall-meta">
+            <span>Munique 2026</span>
+            <span>Procedural record</span>
+          </div>
+          <h1 className="hall-title">Privacy</h1>
+        </div>
+      </section>
+
+      {/* ── Typeset document ── */}
+      <div className="sheet">
+        <div className="story-doc">
+          <p className="mono-label story-doc-updated">Last updated · TBD</p>
+
+          <h2 className="story-doc-h2">Status of this policy</h2>
+          <p className="prose-body">
+            Privacy policy stub — full policy will be published before
+            registration data collection begins.
+          </p>
+
+          <Link href="/" className="link-wipe story-back">
+            ← Back to homepage
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }

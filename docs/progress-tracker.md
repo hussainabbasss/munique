@@ -116,3 +116,19 @@ Last updated: 2026-07-05 (Registration Portal v1)
 4. Wire Gemini merit engine (replace placeholder in `lib/admin/actions/allotments.ts`)
 5. Replace `logo.svg` with EB-provided `logo.png`
 6. Run contrast/a11y audit on public pages
+
+## EB + Secretariat + Committees Update (2026-07-09)
+
+| Step | Task | Status | Notes |
+|------|------|--------|-------|
+| 1 | Write implementation blueprint in docs | ✅ Done | `docs/executive-board-secretariat-committees.md` |
+| 2 | Add DB migration for `eb_members` + schema extensions | ✅ Done | `supabase/migrations/006_eb_secretariat_committees_updates.sql` |
+| 3 | Add admin EB CRUD + portrait upload actions | ✅ Done | `lib/admin/actions/eb.ts` |
+| 4 | Extend Secretariat with description + committee assignment | ✅ Done | Admin action + form updates |
+| 5 | Add committee logo upload + guide enable toggle | ✅ Done | Admin actions/forms/tables updated |
+| 6 | Add `/admin/eb` and sidebar nav entry | ✅ Done | New page + manager component |
+| 7 | Add public `/eb` page | ✅ Done | New route with member cards |
+| 8 | Replace homepage secretariat reveal with EB reveal | ✅ Done | `components/eb-reveal.tsx` in home |
+| 9 | Enhance `/secretariat` with committee + description | ✅ Done | Shows assigned committee chair text |
+| 10 | Enhance `/committees` with logos/buttons/toggle logic | ✅ Done | Includes `View Secretariat` CTA |
+| 11 | Lint/build/type-check validation | ✅ Done | `npm run build` passed; `npm run lint` shows pre-existing warnings in unchanged files |

@@ -125,7 +125,7 @@ export function CommitteePicker({
                   <span className="registration-picker-option-name">
                     {committee.name}
                   </span>
-                  <span className="registration-picker-option-tier">
+                  <span className="tag registration-picker-option-tier">
                     {TIER_LABELS[committee.difficulty_tier]}
                   </span>
                 </button>

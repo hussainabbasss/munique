@@ -49,7 +49,9 @@ export function CommitteesManager({ committees }: Props) {
               <th>Order</th>
               <th>Name</th>
               <th>Tier</th>
+              <th>Logo</th>
               <th>Study guide</th>
+              <th>Guide enabled</th>
               <th>Published</th>
               <th>Actions</th>
             </tr>
@@ -57,7 +59,7 @@ export function CommitteesManager({ committees }: Props) {
           <tbody>
             {committees.length === 0 ? (
               <tr>
-                <td colSpan={6} className="admin-empty">
+                <td colSpan={8} className="admin-empty">
                   No committees yet
                 </td>
               </tr>
@@ -67,7 +69,9 @@ export function CommitteesManager({ committees }: Props) {
                   <td>{c.display_order}</td>
                   <td>{c.name}</td>
                   <td style={{ textTransform: "capitalize" }}>{c.difficulty_tier}</td>
+                  <td>{c.logo_path ? "Uploaded" : "—"}</td>
                   <td>{c.study_guide_path ? "Uploaded" : "—"}</td>
+                  <td>{c.study_guide_enabled ? "Yes" : "No"}</td>
                   <td>{c.is_published ? "Yes" : "No"}</td>
                   <td>
                     <button

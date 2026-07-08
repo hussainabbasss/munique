@@ -1,18 +1,27 @@
 import Link from "next/link";
+import { SealLine } from "@/components/seal-line";
 
 export function RegistrationClosed() {
   return (
-    <main id="main" className="registration-page">
-      <header className="registration-page-header">
-        <p className="registration-edition">Munique 2026 · Edition I</p>
-        <h1 className="registration-page-title">Registration</h1>
-        <p className="registration-page-lead">
-          Registration is not open yet.
+    <main id="main" className="registration-closed">
+      <SealLine className="registration-closed-seal" aria-hidden="true" />
+      <div className="registration-closed-inner">
+        <p className="registration-closed-meta">
+          <span>Munique &rsquo;26</span>
+          <span>Edition I</span>
+          <span>Notice</span>
         </p>
-      </header>
-      <Link href="/" className="registration-back-link">
-        ← Back to homepage
-      </Link>
+        <h1 className="display display-lg registration-closed-title">
+          Registration is closed
+        </h1>
+        <p className="registration-closed-copy">
+          The portal is not accepting entries right now. Follow @munique_2026
+          for the next notice.
+        </p>
+        <Link href="/" className="btn btn-outline-dark">
+          Return to homepage
+        </Link>
+      </div>
     </main>
   );
 }

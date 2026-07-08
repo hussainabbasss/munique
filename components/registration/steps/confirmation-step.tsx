@@ -33,15 +33,15 @@ export function ConfirmationStep({
   return (
     <div className="registration-confirmation">
       <SealStamp size={112} onComplete={() => setAnnounced(true)} />
-      <h2 className="font-display text-[1.5rem] font-semibold text-ink-navy text-balance">
+      <h2 className="registration-confirmation-title">
         Registration received
       </h2>
 
       <div className="registration-confirmation-plate">
-        <p className="font-mono text-xs uppercase tracking-widest text-gold-foil">
+        <p className="registration-confirmation-plate-label">
           Registration ID
         </p>
-        <div className="registration-confirmation-id mt-3">
+        <div className="registration-confirmation-id">
           <span id="registration-id-value">{registrationId}</span>
           <button
             type="button"
@@ -59,15 +59,23 @@ export function ConfirmationStep({
           Registration ID {registrationId} recorded.
         </p>
       )}
-      <p className="mt-5 text-sm leading-relaxed text-ink-navy-soft text-pretty">
+      <p className="registration-confirmation-note">
         Save your registration ID. You will receive an email at {headEmail}.
         Payment verification is pending.
       </p>
       <div className="registration-confirmation-links">
-        <Link href="/" onClick={() => clearRegistrationDraft(portal)}>
+        <Link
+          href="/"
+          className="btn btn-ink"
+          onClick={() => clearRegistrationDraft(portal)}
+        >
           Return to homepage
         </Link>
-        <Link href="/committees" onClick={() => clearRegistrationDraft(portal)}>
+        <Link
+          href="/committees"
+          className="btn btn-outline"
+          onClick={() => clearRegistrationDraft(portal)}
+        >
           View committees
         </Link>
       </div>

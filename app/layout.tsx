@@ -1,40 +1,33 @@
 import type { Metadata } from "next";
 import {
-  Anton,
-  Cinzel,
-  IBM_Plex_Mono,
-  Libre_Franklin,
+  Big_Shoulders,
+  Public_Sans,
+  Spline_Sans_Mono,
 } from "next/font/google";
 import "./globals.css";
 
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
+const bigShoulders = Big_Shoulders({
+  variable: "--font-big-shoulders",
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const libreFranklin = Libre_Franklin({
-  variable: "--font-libre-franklin",
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const anton = Anton({
-  variable: "--font-anton",
+const splineSansMono = Spline_Sans_Mono({
+  variable: "--font-spline-mono",
   subsets: ["latin"],
-  weight: "400",
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-ibm-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "Munique 2026 — Edition I",
+  title: "Munique 2026 — Model United Nations · Edition I",
   description:
-    "Uniqueness Of Diplomacy. Munique 2026 — register for Edition I of the conference.",
+    "The Uniqueness of Diplomacy. Munique 2026 — the assembly convenes. Register for Edition I.",
 };
 
 export default function RootLayout({
@@ -45,7 +38,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${cinzel.variable} ${libreFranklin.variable} ${anton.variable} ${ibmPlexMono.variable} h-full antialiased`}
+      className={`${bigShoulders.variable} ${publicSans.variable} ${splineSansMono.variable} h-full antialiased`}
     >
       <body className="relative flex min-h-full flex-col">
         <a href="#main" className="skip-link">

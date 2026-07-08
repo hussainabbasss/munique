@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/admin/helpers";
-import type { Committee, SecretariatMember, Sponsor } from "@/lib/types/admin";
+import type { Committee, EbMember, SecretariatMember, Sponsor } from "@/lib/types/admin";
+
+export type SecretariatMemberWithCommittee = SecretariatMember & {
+  committees: Pick<Committee, "id" | "name"> | null;
+};
 
 export async function fetchPublishedCommittees(): Promise<Committee[]> {
   if (!isSupabaseConfigured()) return [];
@@ -34,15 +38,28 @@ export function getPublicStorageUrl(bucket: string, path: string) {
   return `${url}/storage/v1/object/public/${bucket}/${path}`;
 }
 
-export async function fetchPublishedSecretariat(): Promise<SecretariatMember[]> {
+export async function fetchPublishedSecretariat(): Promise<SecretariatMemberWithCommittee[]> {
   if (!isSupabaseConfigured()) return [];
 
   const supabase = await createClient();
   const { data } = await supabase
     .from("secretariat_members")
+    .select("*, committees(id,name)")
+    .eq("is_published", true)
+    .order("display_order");
+
+  return (data ?? []) as SecretariatMemberWithCommittee[];
+}
+
+export async function fetchPublishedEbMembers(): Promise<EbMember[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("eb_members")
     .select("*")
     .eq("is_published", true)
     .order("display_order");
 
-  return (data ?? []) as SecretariatMember[];
+  return (data ?? []) as EbMember[];
 }

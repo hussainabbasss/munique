@@ -1,0 +1,680 @@
+/* ═══════════════════════════════════════════════════════════════
+   HOME — the front door of the assembly
+   Cobalt field hero · paper facts band · proceedings ledger ·
+   ink board rail · partner lattice.
+   ═══════════════════════════════════════════════════════════════ */
+
+.home-main {
+  background: var(--paper);
+}
+
+/* ── Hero: drenched cobalt field ── */
+
+.home-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--cobalt);
+  color: var(--on-dark);
+  overflow: hidden;
+}
+
+.home-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* General-assembly seating chart — concentric seat arcs from bottom center */
+.home-hero-chart {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: min(72%, 42rem);
+  color: var(--on-dark);
+  opacity: 0.15;
+}
+
+/* Conference seal, off-right, in extremely slow session */
+.home-hero-seal {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .home-hero-seal {
+    display: block;
+    position: absolute;
+    top: 50%;
+    right: clamp(-14rem, -18vw, -7rem);
+    width: clamp(28rem, 46vw, 46rem);
+    transform: translateY(-52%);
+    color: var(--on-dark);
+    opacity: 0.11;
+  }
+}
+
+.home-hero-seal-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  animation: home-seal-spin 180s linear infinite;
+}
+
+@keyframes home-seal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.home-hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: min(100%, 84rem);
+  margin-inline: auto;
+  padding: calc(var(--site-banner-height) + var(--nav-height) + 1.25rem)
+    var(--gutter) 0;
+}
+
+.home-hero-meta {
+  margin: 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line-dark);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-dark-dim);
+}
+
+.home-hero-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
+  margin-block: auto;
+  padding-block: clamp(2.5rem, 6vh, 4.5rem);
+}
+
+.home-hero-title {
+  margin: 0;
+  font-size: clamp(4rem, 13vw, 6rem);
+}
+
+.home-hero-tagline {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.125rem, 2.4vw, 1.625rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--on-dark);
+}
+
+.home-hero-lede {
+  margin: 0;
+  max-width: 46ch;
+  font-size: clamp(1rem, 1.5vw, 1.1875rem);
+  line-height: 1.6;
+  color: var(--on-dark-dim);
+  text-wrap: pretty;
+}
+
+.home-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 2rem;
+  margin-top: 0.625rem;
+}
+
+.home-hero-cta-alt {
+  min-height: 3rem;
+  color: var(--on-dark);
+}
+
+/* Bottom edge: hairline-ruled strip of three mono facts */
+.home-hero-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--line-dark);
+}
+
+.home-hero-strip-cell {
+  padding: 0.875rem 0.5rem 1.125rem 0;
+}
+
+.home-hero-strip-cell + .home-hero-strip-cell {
+  border-left: 1px solid var(--line-dark);
+  padding-left: clamp(0.75rem, 2.5vw, 1.5rem);
+}
+
+.home-hero-strip-cell dt {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-dark-dim);
+}
+
+.home-hero-strip-cell dd {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-dark);
+}
+
+/* Nav watches this to switch from overlay to solid — do not rename */
+.hero-scroll-sentinel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+}
+
+/* Load choreography — animates FROM offset TO natural state,
+   so content is visible without JS and under reduced motion. */
+.home-rise {
+  animation: home-rise-in 760ms var(--ease-out) both;
+}
+
+.home-rise-d1 {
+  animation-delay: 90ms;
+}
+
+.home-rise-d2 {
+  animation-delay: 190ms;
+}
+
+.home-rise-d3 {
+  animation-delay: 290ms;
+}
+
+.home-rise-d4 {
+  animation-delay: 400ms;
+}
+
+@keyframes home-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+}
+
+/* ── Facts: paper band, four ruled columns ── */
+
+.home-facts {
+  background: var(--paper);
+  padding-block: clamp(3rem, 7vw, 5rem);
+}
+
+.home-facts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line-strong);
+}
+
+.home-facts-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.5rem 1rem 1.5rem 0;
+}
+
+.home-facts-cell:nth-child(even) {
+  border-left: 1px solid var(--line);
+  padding-left: 1.25rem;
+  padding-right: 0;
+}
+
+.home-facts-cell:nth-child(n + 3) {
+  border-top: 1px solid var(--line);
+}
+
+@media (min-width: 900px) {
+  .home-facts-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .home-facts-cell {
+    padding: 2rem 1.5rem 2rem 0;
+  }
+
+  .home-facts-cell:nth-child(n + 3) {
+    border-top: 0;
+  }
+
+  .home-facts-cell:nth-child(n + 2) {
+    border-left: 1px solid var(--line);
+    padding-left: 1.5rem;
+  }
+}
+
+.home-facts-value {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 4vw, 3rem);
+  font-weight: 700;
+  line-height: var(--leading-display);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.home-facts-value-tba {
+  display: flex;
+  align-items: center;
+  min-height: 1em;
+}
+
+.home-facts-stamp {
+  transform: rotate(-2deg);
+}
+
+/* ── Proceedings: full-width ledger of big rows ── */
+
+.home-proceedings {
+  background: var(--paper);
+  padding-top: clamp(3rem, 8vw, 6rem);
+  padding-bottom: clamp(4rem, 9vw, 7rem);
+}
+
+.home-proceedings-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: clamp(2rem, 5vw, 3.25rem);
+}
+
+.home-proceedings-title {
+  margin: 0;
+}
+
+.home-row-link {
+  display: block;
+}
+
+.home-row-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 1.5rem;
+  row-gap: 0.375rem;
+  width: min(100%, 84rem);
+  margin-inline: auto;
+  padding: clamp(1.5rem, 4vw, 2.5rem) var(--gutter);
+}
+
+.home-row-title {
+  grid-column: 1;
+  margin: 0;
+  color: var(--ink);
+  transition: color var(--dur-fast) var(--ease-swift);
+}
+
+.home-row-desc {
+  grid-column: 1;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  transition: color var(--dur-fast) var(--ease-swift);
+}
+
+.home-row-arrow {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-size: 1.375rem;
+  color: var(--ink);
+  transition: color var(--dur-fast) var(--ease-swift);
+}
+
+/* Duotone thumbnail — desktop only, fades in on the hovered row */
+.home-row-thumb {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .home-row-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr) 12rem auto;
+    column-gap: 2.5rem;
+  }
+
+  .home-row-title {
+    grid-row: 1;
+  }
+
+  .home-row-desc {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 1rem;
+  }
+
+  .home-row-thumb {
+    display: block;
+    position: relative;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    width: 12rem;
+    height: 6.75rem;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+      opacity var(--dur-med) var(--ease-out),
+      transform var(--dur-med) var(--ease-out);
+  }
+
+  .home-row-arrow {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .home-ledger .home-row-link:hover .home-row-thumb,
+  .home-ledger .home-row-link:focus-visible .home-row-thumb {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hover: the row floods cobalt, text flips to on-dark, arrow slides */
+.home-ledger .home-row-link {
+  transition: background-color var(--dur-fast) var(--ease-swift);
+}
+
+.home-ledger .home-row-link:hover,
+.home-ledger .home-row-link:focus-visible {
+  background-color: var(--cobalt);
+}
+
+.home-ledger .home-row-link:hover .home-row-title,
+.home-ledger .home-row-link:focus-visible .home-row-title,
+.home-ledger .home-row-link:hover .home-row-arrow,
+.home-ledger .home-row-link:focus-visible .home-row-arrow {
+  color: var(--on-dark);
+}
+
+.home-ledger .home-row-link:hover .home-row-desc,
+.home-ledger .home-row-link:focus-visible .home-row-desc {
+  color: var(--on-dark-dim);
+}
+
+.home-ledger .home-row-link:hover .arrow,
+.home-ledger .home-row-link:focus-visible .arrow {
+  transform: translateX(8px);
+}
+
+/* Cobalt duotone treatment for photography */
+.home-duotone {
+  position: relative;
+  isolation: isolate;
+  background: var(--cobalt);
+}
+
+.home-duotone img {
+  filter: grayscale(100%);
+  mix-blend-mode: luminosity;
+  object-fit: cover;
+}
+
+/* ── The Board: ink band, scroll-snapping rail of plates ── */
+
+.home-board {
+  background: var(--ink);
+  color: var(--on-dark);
+  padding-block: clamp(3.5rem, 8vw, 6rem);
+}
+
+.home-board-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line-dark);
+  margin-bottom: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+.home-board-title {
+  margin: 0;
+  color: var(--on-dark);
+}
+
+.home-board-lede {
+  margin: 0.75rem 0 0;
+  max-width: 52ch;
+  color: var(--on-dark-dim);
+}
+
+.home-board-rail {
+  display: flex;
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0 0 1rem;
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-dark) transparent;
+}
+
+.home-board-plate {
+  flex: 0 0 auto;
+  width: clamp(13.5rem, 24vw, 16.5rem);
+  scroll-snap-align: start;
+  border: 1px solid var(--line-dark);
+}
+
+.home-board-portrait {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+}
+
+.home-board-portrait-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-board-monogram {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background: var(--cobalt);
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 5vw, 4.5rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--on-dark);
+}
+
+.home-board-id {
+  padding: 1rem 1.125rem 1.125rem;
+  border-top: 1px solid var(--line-dark);
+}
+
+.home-board-name {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-dark);
+}
+
+.home-board-role {
+  margin: 0.375rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-dark-dim);
+}
+
+.home-board-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  border: 1px dashed var(--line-dark);
+  padding: clamp(2rem, 5vw, 3.5rem);
+}
+
+.home-board-empty-title {
+  margin: 0;
+  color: var(--on-dark);
+}
+
+.home-board-empty-copy {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--on-dark-dim);
+}
+
+/* ── Partners: hairline lattice of logo cells ── */
+
+.home-partners {
+  background: var(--paper);
+  padding-block: clamp(3.5rem, 8vw, 6rem) clamp(4rem, 9vw, 7rem);
+}
+
+.home-partners-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 2rem;
+  margin-bottom: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.home-partners-title {
+  margin: 0;
+}
+
+.home-partners-note {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+/* 1px gaps over a line-colored background collapse into a single lattice */
+.home-partners-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+
+@media (min-width: 768px) {
+  .home-partners-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.home-partner-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.875rem;
+  min-height: clamp(8.5rem, 14vw, 10.5rem);
+  padding: 1.5rem 1.25rem;
+  background: var(--paper);
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color var(--dur-fast) var(--ease-swift);
+}
+
+a.home-partner-cell:hover,
+a.home-partner-cell:focus-visible {
+  background: var(--paper-2);
+}
+
+.home-partner-logo {
+  max-width: min(9.5rem, 78%);
+  max-height: 3.25rem;
+  object-fit: contain;
+}
+
+.home-partner-name {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.home-partner-tier {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.home-partner-tba {
+  padding: 0.875rem;
+}
+
+.home-partner-tba-box {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* ── Reduced motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .home-rise,
+  .home-hero-seal-svg {
+    animation: none;
+  }
+
+  .home-row-thumb {
+    transition: none;
+    transform: none;
+  }
+
+  .home-ledger .home-row-link,
+  .home-row-title,
+  .home-row-desc,
+  .home-row-arrow,
+  .home-partner-cell {
+    transition: none;
+  }
+}

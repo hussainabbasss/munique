@@ -38,6 +38,8 @@ export type Committee = {
   agenda: string;
   difficulty_tier: "low" | "medium" | "high";
   study_guide_path: string | null;
+  study_guide_enabled: boolean;
+  logo_path: string | null;
   display_order: number;
   is_published: boolean;
   created_at: string;
@@ -141,7 +143,22 @@ export type SecretariatMember = {
   id: string;
   full_name: string;
   role_title: string;
+  description: string;
   portrait_path: string | null;
+  committee_id: string | null;
+  display_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EbMember = {
+  id: string;
+  full_name: string;
+  role_title: string;
+  description: string;
+  portrait_path: string | null;
+  is_founder: boolean;
   display_order: number;
   is_published: boolean;
   created_at: string;

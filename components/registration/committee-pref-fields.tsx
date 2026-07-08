@@ -57,7 +57,7 @@ export function CommitteePrefFields({
         </label>
         <textarea
           id="mun_experience"
-          className="registration-field min-h-[8rem] resize-y"
+          className="registration-field"
           rows={5}
           value={munExperience}
           onChange={(event) => onMunExperienceChange(event.target.value)}

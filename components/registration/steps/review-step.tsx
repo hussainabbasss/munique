@@ -62,9 +62,24 @@ export function ReviewStep({
               </button>
             </div>
             <div className="registration-review-body">
-              <p>{delegationDraft.school}</p>
-              <p>{delegationDraft.headName}</p>
-              <p>{delegationDraft.headEmail}</p>
+              <div className="registration-review-row">
+                <span className="registration-review-key">School</span>
+                <span className="registration-review-value">
+                  {delegationDraft.school}
+                </span>
+              </div>
+              <div className="registration-review-row">
+                <span className="registration-review-key">Head delegate</span>
+                <span className="registration-review-value">
+                  {delegationDraft.headName}
+                </span>
+              </div>
+              <div className="registration-review-row">
+                <span className="registration-review-key">Email</span>
+                <span className="registration-review-value">
+                  {delegationDraft.headEmail}
+                </span>
+              </div>
             </div>
           </section>
 
@@ -80,11 +95,16 @@ export function ReviewStep({
               </button>
             </div>
             <div className="registration-review-body">
-              <ul className="list-none space-y-1 p-0">
+              <ul className="registration-review-list">
                 {delegationDraft.members.map((member, index) => (
-                  <li key={index}>
-                    {member.fullName}
-                    {member.email ? ` · ${member.email}` : ""}
+                  <li key={index} className="registration-review-row">
+                    <span className="registration-review-key">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="registration-review-value">
+                      {member.fullName}
+                      {member.email ? ` · ${member.email}` : ""}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -104,9 +124,24 @@ export function ReviewStep({
             </button>
           </div>
           <div className="registration-review-body">
-            <p>{delegateDraft.fullName}</p>
-            <p>{delegateDraft.email}</p>
-            <p>{delegateDraft.school}</p>
+            <div className="registration-review-row">
+              <span className="registration-review-key">Name</span>
+              <span className="registration-review-value">
+                {delegateDraft.fullName}
+              </span>
+            </div>
+            <div className="registration-review-row">
+              <span className="registration-review-key">Email</span>
+              <span className="registration-review-value">
+                {delegateDraft.email}
+              </span>
+            </div>
+            <div className="registration-review-row">
+              <span className="registration-review-key">School</span>
+              <span className="registration-review-value">
+                {delegateDraft.school}
+              </span>
+            </div>
           </div>
         </section>
       )}
@@ -123,16 +158,34 @@ export function ReviewStep({
           </button>
         </div>
         <div className="registration-review-body">
-          <p>1. {committeeName(committees, draft.committeePref1)}</p>
+          <div className="registration-review-row">
+            <span className="registration-review-key">Choice 1</span>
+            <span className="registration-review-value">
+              {committeeName(committees, draft.committeePref1)}
+            </span>
+          </div>
           {draft.committeePref2 && (
-            <p>2. {committeeName(committees, draft.committeePref2)}</p>
+            <div className="registration-review-row">
+              <span className="registration-review-key">Choice 2</span>
+              <span className="registration-review-value">
+                {committeeName(committees, draft.committeePref2)}
+              </span>
+            </div>
           )}
           {draft.committeePref3 && (
-            <p>3. {committeeName(committees, draft.committeePref3)}</p>
+            <div className="registration-review-row">
+              <span className="registration-review-key">Choice 3</span>
+              <span className="registration-review-value">
+                {committeeName(committees, draft.committeePref3)}
+              </span>
+            </div>
           )}
-          <p className="mt-2 whitespace-pre-wrap break-words registration-review-text">
-            {draft.munExperience}
-          </p>
+          <div className="registration-review-row">
+            <span className="registration-review-key">Experience</span>
+            <span className="registration-review-value registration-review-prewrap">
+              {draft.munExperience}
+            </span>
+          </div>
         </div>
       </section>
 
@@ -148,15 +201,20 @@ export function ReviewStep({
           </button>
         </div>
         <div className="registration-review-body">
-          {fees.delegateCount > 1 ? (
-            <p>
-              {formatPkr(fees.perDelegateFee)} × {fees.delegateCount} ={" "}
-              {formatPkr(fees.totalFee)}
-            </p>
-          ) : (
-            <p>{formatPkr(fees.totalFee)}</p>
-          )}
-          <p className="mt-2 text-sm text-ink-navy-soft">
+          <div className="registration-review-row">
+            <span className="registration-review-key">Fee</span>
+            <span className="registration-review-value">
+              {fees.delegateCount > 1 ? (
+                <>
+                  {formatPkr(fees.perDelegateFee)} × {fees.delegateCount} ={" "}
+                  {formatPkr(fees.totalFee)}
+                </>
+              ) : (
+                <>{formatPkr(fees.totalFee)}</>
+              )}
+            </span>
+          </div>
+          <p className="registration-review-footnote">
             Payment will be verified by staff after you submit.
           </p>
         </div>
@@ -169,11 +227,14 @@ export function ReviewStep({
           onClick={onBack}
           disabled={submitting}
         >
-          ← Back
+          <span className="arrow" aria-hidden="true">
+            ←
+          </span>
+          Back
         </button>
         <button
           type="button"
-          className="btn-primary registration-nav-primary"
+          className="btn btn-signal registration-nav-primary"
           onClick={onSubmit}
           disabled={submitting}
         >

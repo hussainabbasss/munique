@@ -19,6 +19,7 @@ import {
   validateDelegateAbout,
   validateDelegationMembers,
   validateDelegationSchoolHead,
+  validatePaymentProof,
 } from "@/lib/registration/validation";
 import type {
   DelegateDraft,
@@ -59,6 +60,7 @@ export function RegistrationWizard({
     registrationId: string;
     headEmail: string;
   } | null>(null);
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const { draft, updateDraft, hydrated } = useRegistrationDraft(portal);
 
@@ -92,6 +94,9 @@ export function RegistrationWizard({
         }
         return validateCommitteePrefs(delegateDraft, committees);
       }
+      if (stepIndex === 2) {
+        return validatePaymentProof(paymentProofFile);
+      }
       return null;
     }
 
@@ -103,6 +108,9 @@ export function RegistrationWizard({
         return "Committee preferences are unavailable. Please contact the EB.";
       }
       return validateCommitteePrefs(delegationDraft, committees);
+    }
+    if (stepIndex === 3) {
+      return validatePaymentProof(paymentProofFile);
     }
     return null;
   };
@@ -123,6 +131,12 @@ export function RegistrationWizard({
   };
 
   const handleSubmit = async () => {
+    const paymentError = validatePaymentProof(paymentProofFile);
+    if (paymentError) {
+      setSubmitError(paymentError);
+      return;
+    }
+
     setSubmitError(null);
     setSubmitting(true);
 
@@ -148,6 +162,10 @@ export function RegistrationWizard({
       formData.set("committee_pref_3", draft.committeePref3);
       formData.set("mun_experience", draft.munExperience);
 
+      if (paymentProofFile) {
+        formData.append("payment_proof", paymentProofFile);
+      }
+
       const response = await submitRegistrationAction(formData);
 
       if (!response.ok) {
@@ -172,18 +190,25 @@ export function RegistrationWizard({
   if (!hydrated) {
     return (
       <main id="main" className="registration-wizard" aria-busy="true">
-        <div className="registration-masthead">
-          <p className="registration-masthead-trail">
-            <Link href="/register">Registration</Link>
-            <span aria-hidden="true"> · </span>
-            {portalLabel}
-          </p>
-        </div>
-        <p className="sr-only">Loading registration form</p>
-        <div className="registration-loading" aria-hidden="true">
-          <div className="registration-loading-line" />
-          <div className="registration-loading-line" />
-          <div className="registration-loading-line" />
+        <header className="registration-masthead">
+          <div className="registration-masthead-inner">
+            <p className="registration-masthead-trail">
+              <Link href="/register">Registration</Link>
+              <span aria-hidden="true">/</span>
+              <span>{portalLabel}</span>
+            </p>
+            <p className="registration-masthead-portal" aria-hidden="true">
+              {portalLabel}
+            </p>
+          </div>
+        </header>
+        <div className="registration-sheet">
+          <p className="sr-only">Loading registration form</p>
+          <div className="registration-loading" aria-hidden="true">
+            <div className="registration-loading-line" />
+            <div className="registration-loading-line" />
+            <div className="registration-loading-line" />
+          </div>
         </div>
       </main>
     );
@@ -192,122 +217,143 @@ export function RegistrationWizard({
   return (
     <main id="main" className="registration-wizard">
       <header className="registration-masthead">
-        <p className="registration-masthead-trail">
-          <Link href="/register">Registration</Link>
-          <span aria-hidden="true"> · </span>
-          <span className="registration-masthead-portal">{portalLabel}</span>
-        </p>
+        <div className="registration-masthead-inner">
+          <p className="registration-masthead-trail">
+            <Link href="/register">Registration</Link>
+            <span aria-hidden="true">/</span>
+            <span className="registration-masthead-crumb">{portalLabel}</span>
+          </p>
+          <p className="registration-masthead-portal" aria-hidden="true">
+            {portalLabel}
+          </p>
+        </div>
       </header>
 
-      {!isConfirmation && (
-        <WizardProgress
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          stepName={steps[stepIndex].title}
-        />
-      )}
+      <div className="registration-sheet">
+        {!isConfirmation && (
+          <WizardProgress
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            stepName={steps[stepIndex].title}
+          />
+        )}
 
-      {!isConfirmation && (
-        <div className="registration-step-header">
-          <h2
-            ref={titleRef}
-            tabIndex={-1}
-            className="registration-step-title"
-          >
-            {steps[stepIndex].title}
-          </h2>
+        {!isConfirmation && (
+          <div className="registration-step-header">
+            <p className="registration-step-index" aria-hidden="true">
+              {String(currentStep).padStart(2, "0")}
+            </p>
+            <h2
+              ref={titleRef}
+              tabIndex={-1}
+              className="registration-step-title"
+            >
+              {steps[stepIndex].title}
+            </h2>
+          </div>
+        )}
+
+        {error && (
+          <p className="registration-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className="registration-form-body">
+          {portal === "delegate" && stepIndex === 0 && (
+            <AboutStep draft={draft as DelegateDraft} onChange={updateDraft} />
+          )}
+
+          {portal === "delegation" && stepIndex === 0 && (
+            <SchoolHeadStep
+              draft={draft as DelegationDraft}
+              onChange={updateDraft}
+            />
+          )}
+
+          {portal === "delegation" && stepIndex === 1 && (
+            <DelegationMembersStep
+              draft={draft as DelegationDraft}
+              onChange={updateDraft}
+            />
+          )}
+
+          {((portal === "delegate" && stepIndex === 1) ||
+            (portal === "delegation" && stepIndex === 2)) && (
+            <CommitteePrefsStep
+              committees={committees}
+              draft={draft}
+              onChange={updateDraft}
+            />
+          )}
+
+          {((portal === "delegate" && stepIndex === 2) ||
+            (portal === "delegation" && stepIndex === 3)) && (
+            <PaymentStep
+              pricing={pricing}
+              fees={fees}
+              paymentProofFile={paymentProofFile}
+              onPaymentProofFileChange={setPaymentProofFile}
+            />
+          )}
+
+          {isReview && (
+            <ReviewStep
+              portal={portal}
+              draft={draft}
+              committees={committees}
+              fees={fees}
+              onEdit={(index) => {
+                setSubmitError(null);
+                setStepIndex(index);
+              }}
+              onBack={goBack}
+              submitting={submitting}
+              error={submitError}
+              onSubmit={handleSubmit}
+            />
+          )}
+
+          {isConfirmation && result && (
+            <ConfirmationStep
+              portal={portal}
+              registrationId={result.registrationId}
+              headEmail={result.headEmail}
+            />
+          )}
         </div>
-      )}
 
-      {error && (
-        <p className="registration-error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="registration-form-body">
-        {portal === "delegate" && stepIndex === 0 && (
-          <AboutStep draft={draft as DelegateDraft} onChange={updateDraft} />
-        )}
-
-        {portal === "delegation" && stepIndex === 0 && (
-          <SchoolHeadStep
-            draft={draft as DelegationDraft}
-            onChange={updateDraft}
-          />
-        )}
-
-        {portal === "delegation" && stepIndex === 1 && (
-          <DelegationMembersStep
-            draft={draft as DelegationDraft}
-            onChange={updateDraft}
-          />
-        )}
-
-        {((portal === "delegate" && stepIndex === 1) ||
-          (portal === "delegation" && stepIndex === 2)) && (
-          <CommitteePrefsStep
-            committees={committees}
-            draft={draft}
-            onChange={updateDraft}
-          />
-        )}
-
-        {((portal === "delegate" && stepIndex === 2) ||
-          (portal === "delegation" && stepIndex === 3)) && (
-          <PaymentStep pricing={pricing} fees={fees} />
-        )}
-
-        {isReview && (
-          <ReviewStep
-            portal={portal}
-            draft={draft}
-            committees={committees}
-            fees={fees}
-            onEdit={(index) => {
-              setSubmitError(null);
-              setStepIndex(index);
-            }}
-            onBack={goBack}
-            submitting={submitting}
-            error={submitError}
-            onSubmit={handleSubmit}
-          />
-        )}
-
-        {isConfirmation && result && (
-          <ConfirmationStep
-            portal={portal}
-            registrationId={result.registrationId}
-            headEmail={result.headEmail}
-          />
-        )}
-      </div>
-
-      {!isReview && !isConfirmation && (
-        <div className="registration-wizard-nav">
-          {stepIndex > 0 ? (
+        {!isReview && !isConfirmation && (
+          <div className="registration-wizard-nav">
+            {stepIndex > 0 ? (
+              <button
+                type="button"
+                className="registration-btn-back"
+                onClick={goBack}
+              >
+                <span className="arrow" aria-hidden="true">
+                  ←
+                </span>
+                Back
+              </button>
+            ) : (
+              <Link href="/register" className="registration-btn-back">
+                <span className="arrow" aria-hidden="true">
+                  ←
+                </span>
+                Back
+              </Link>
+            )}
             <button
               type="button"
-              className="registration-btn-back"
-              onClick={goBack}
+              className="btn btn-signal registration-nav-primary"
+              onClick={goNext}
             >
-              ← Back
+              Continue →
             </button>
-          ) : (
-            <Link href="/register" className="registration-btn-back">
-              ← Back
-            </Link>
-          )}
-          <button
-            type="button"
-            className="btn-primary registration-nav-primary"
-            onClick={goNext}
-          >
-            Continue →
-          </button>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

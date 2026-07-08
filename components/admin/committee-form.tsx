@@ -2,8 +2,10 @@
 
 import { useActionState } from "react";
 import {
+  removeCommitteeLogoAction,
   removeStudyGuideAction,
   saveCommitteeAction,
+  uploadCommitteeLogoAction,
   uploadStudyGuideAction,
 } from "@/lib/admin/actions/committees";
 import type { Committee } from "@/lib/types/admin";
@@ -26,6 +28,12 @@ export function CommitteeForm({ committee, onDone }: Props) {
   const [uploadState, uploadAction, uploading] = useActionState(
     async (_prev: { success?: string; error?: string } | null, formData: FormData) =>
       uploadStudyGuideAction(formData),
+    null,
+  );
+
+  const [logoState, logoAction, logoUploading] = useActionState(
+    async (_prev: { success?: string; error?: string } | null, formData: FormData) =>
+      uploadCommitteeLogoAction(formData),
     null,
   );
 
@@ -90,6 +98,15 @@ export function CommitteeForm({ committee, onDone }: Props) {
           />
           <label htmlFor="is_published">Published</label>
         </div>
+        <div className="admin-checkbox-row">
+          <input
+            id="study_guide_enabled"
+            name="study_guide_enabled"
+            type="checkbox"
+            defaultChecked={committee?.study_guide_enabled ?? false}
+          />
+          <label htmlFor="study_guide_enabled">Enable study guide button</label>
+        </div>
         <div className="admin-actions">
           <button type="submit" className="btn-admin-primary" disabled={saving}>
             {saving ? "Saving…" : "Save committee"}
@@ -99,6 +116,37 @@ export function CommitteeForm({ committee, onDone }: Props) {
 
       {committee?.id && (
         <>
+          <hr className="admin-section-divider" />
+          <h3 className="admin-panel-title">Committee logo</h3>
+          {committee.logo_path ? (
+            <p className="admin-field-hint">
+              Uploaded: {committee.logo_path.split("/").pop()}
+            </p>
+          ) : (
+            <p className="admin-field-hint">No logo uploaded</p>
+          )}
+          {logoState?.error && (
+            <p className="admin-toast admin-toast-error">{logoState.error}</p>
+          )}
+          {logoState?.success && (
+            <p className="admin-toast admin-toast-success">{logoState.success}</p>
+          )}
+          <form action={logoAction} className="admin-actions">
+            <input type="hidden" name="committee_id" value={committee.id} />
+            <input name="logo" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" required />
+            <button type="submit" className="btn-admin-secondary" disabled={logoUploading}>
+              Upload logo
+            </button>
+            {committee.logo_path && (
+              <button
+                type="button"
+                className="btn-admin-secondary btn-admin-danger"
+                onClick={() => removeCommitteeLogoAction(committee.id)}
+              >
+                Remove logo
+              </button>
+            )}
+          </form>
           <hr className="admin-section-divider" />
           <h3 className="admin-panel-title">Study guide</h3>
           {committee.study_guide_path ? (

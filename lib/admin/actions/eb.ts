@@ -5,14 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { requireAdminUser } from "@/lib/admin/helpers";
 
-export async function saveSecretariatMemberAction(formData: FormData) {
+export async function saveEbMemberAction(formData: FormData) {
   await requireAdminUser();
 
   const id = String(formData.get("id") ?? "") || null;
   const fullName = String(formData.get("full_name") ?? "").trim();
   const roleTitle = String(formData.get("role_title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const committeeId = String(formData.get("committee_id") ?? "").trim() || null;
+  const isFounder = formData.get("is_founder") === "on";
   const displayOrder = parseInt(String(formData.get("display_order") ?? "0"), 10);
   const isPublished = formData.get("is_published") === "on";
 
@@ -22,7 +22,7 @@ export async function saveSecretariatMemberAction(formData: FormData) {
     full_name: fullName,
     role_title: roleTitle,
     description,
-    committee_id: committeeId,
+    is_founder: isFounder,
     display_order: displayOrder,
     is_published: isPublished,
     updated_at: new Date().toISOString(),
@@ -31,24 +31,20 @@ export async function saveSecretariatMemberAction(formData: FormData) {
   const supabase = await createClient();
 
   if (id) {
-    const { error } = await supabase
-      .from("secretariat_members")
-      .update(payload)
-      .eq("id", id);
+    const { error } = await supabase.from("eb_members").update(payload).eq("id", id);
     if (error) return { error: error.message };
   } else {
-    const { error } = await supabase.from("secretariat_members").insert(payload);
+    const { error } = await supabase.from("eb_members").insert(payload);
     if (error) return { error: error.message };
   }
 
-  revalidatePath("/admin/secretariat");
-  revalidatePath("/secretariat");
-  revalidatePath("/committees");
+  revalidatePath("/admin/eb");
+  revalidatePath("/eb");
   revalidatePath("/");
-  return { success: "Member saved" };
+  return { success: "EB member saved" };
 }
 
-export async function uploadSecretariatPortraitAction(formData: FormData) {
+export async function uploadEbPortraitAction(formData: FormData) {
   await requireAdminUser();
 
   const memberId = String(formData.get("member_id") ?? "");
@@ -64,7 +60,7 @@ export async function uploadSecretariatPortraitAction(formData: FormData) {
   }
 
   if (file.size > 3 * 1024 * 1024) {
-    return { error: "Portrait must be under 3 MB." };
+    return { error: "Portrait must be under 3MB." };
   }
 
   const service = createServiceClient();
@@ -75,46 +71,42 @@ export async function uploadSecretariatPortraitAction(formData: FormData) {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error: uploadError } = await service.storage
-    .from("secretariat-portraits")
+    .from("eb-portraits")
     .upload(path, buffer, { contentType: file.type, upsert: true });
 
   if (uploadError) return { error: uploadError.message };
 
   const supabase = await createClient();
   await supabase
-    .from("secretariat_members")
+    .from("eb_members")
     .update({ portrait_path: path, updated_at: new Date().toISOString() })
     .eq("id", memberId);
 
-  revalidatePath("/admin/secretariat");
-  revalidatePath("/secretariat");
-  revalidatePath("/committees");
+  revalidatePath("/admin/eb");
+  revalidatePath("/eb");
   revalidatePath("/");
   return { success: "Portrait uploaded" };
 }
 
-export async function deleteSecretariatMemberAction(memberId: string) {
+export async function deleteEbMemberAction(memberId: string) {
   await requireAdminUser();
   const supabase = await createClient();
 
   const { data } = await supabase
-    .from("secretariat_members")
+    .from("eb_members")
     .select("portrait_path")
     .eq("id", memberId)
     .single();
 
   if (data?.portrait_path) {
     const service = createServiceClient();
-    await service?.storage
-      .from("secretariat-portraits")
-      .remove([data.portrait_path]);
+    await service?.storage.from("eb-portraits").remove([data.portrait_path]);
   }
 
-  await supabase.from("secretariat_members").delete().eq("id", memberId);
+  await supabase.from("eb_members").delete().eq("id", memberId);
 
-  revalidatePath("/admin/secretariat");
-  revalidatePath("/secretariat");
-  revalidatePath("/committees");
+  revalidatePath("/admin/eb");
+  revalidatePath("/eb");
   revalidatePath("/");
   return { success: "Member removed" };
 }

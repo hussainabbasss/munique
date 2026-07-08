@@ -1,54 +1,61 @@
+import "./home.css";
+
 import { ConferenceFacts } from "@/components/conference-facts";
+import { EbReveal } from "@/components/eb-reveal";
 import { ExploreGrid } from "@/components/explore-grid";
 import { Hero } from "@/components/hero";
-import { SecretariatPreview } from "@/components/secretariat-portrait";
+import { Reveal } from "@/components/reveal";
 import { SponsorCard } from "@/components/sponsor-card";
 import { fetchPublishedSponsors } from "@/lib/public/queries";
 
-const sponsorPlaceholders = [
-  "Partner I",
-  "Partner II",
-  "Partner III",
-  "Partner IV",
-];
-
 export default async function Home() {
   const sponsors = await fetchPublishedSponsors();
+  const tbaCount =
+    sponsors.length === 0 ? 4 : (4 - (sponsors.length % 4)) % 4;
 
   return (
     <main id="main" className="home-main">
       <Hero />
       <ConferenceFacts />
       <ExploreGrid />
-      <SecretariatPreview />
+      <EbReveal />
 
-      <section
-        className="sponsors-section"
-        aria-labelledby="sponsors-title"
-      >
-        <div className="mx-auto max-w-[1280px]">
-          <h2 id="sponsors-title" className="section-title text-ink-navy">
-            Sponsors &amp; Partners
-          </h2>
-          <p className="section-lead text-sm">
-            {sponsors.length
-              ? "Our partners for Edition I."
-              : "Partner logos publish as agreements finalize."}
-          </p>
+      <section className="home-partners" aria-labelledby="partners-title">
+        <div className="sheet">
+          <Reveal>
+            <div className="home-partners-head">
+              <h2
+                id="partners-title"
+                className="display display-md home-partners-title"
+              >
+                Partners
+              </h2>
+              <p className="home-partners-note">
+                {sponsors.length
+                  ? "The partners of Edition I."
+                  : "Partnerships are in procedure. Logos publish as agreements are signed."}
+              </p>
+            </div>
+          </Reveal>
 
-          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-            {sponsors.length > 0
-              ? sponsors.map((s) => <SponsorCard key={s.id} sponsor={s} />)
-              : sponsorPlaceholders.map((name) => (
-                  <div
-                    key={name}
-                    className="sponsor-slot"
-                    aria-label={`${name} — logo TBA`}
-                  >
+          <Reveal delay={90}>
+            <div className="home-partners-grid">
+              {sponsors.map((sponsor) => (
+                <SponsorCard key={sponsor.id} sponsor={sponsor} />
+              ))}
+              {Array.from({ length: tbaCount }, (_, index) => (
+                <div
+                  key={`tba-${index}`}
+                  className="home-partner-cell home-partner-tba"
+                >
+                  <span className="home-partner-tba-box" aria-hidden>
                     TBA
-                  </div>
-                ))}
-          </div>
+                  </span>
+                  <span className="sr-only">Partner to be announced</span>
+                </div>
+              ))}
+            </div>
+          </Reveal>
         </div>
       </section>
     </main>

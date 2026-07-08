@@ -1,14 +1,26 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { SealImage } from "@/components/seal-image";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 const navLinks = [
   { href: "/about", label: "About" },
+  { href: "/eb", label: "Executive Board" },
   { href: "/committees", label: "Committees" },
   { href: "/schedule", label: "Schedule" },
+  { href: "/contact", label: "Contact" },
+] as const;
+
+const menuLinks = [
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
+  { href: "/eb", label: "Executive Board" },
+  { href: "/secretariat", label: "Secretariat" },
+  { href: "/committees", label: "Committees" },
+  { href: "/schedule", label: "Schedule" },
+  { href: "/study-guide", label: "Study Guides" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
@@ -17,7 +29,7 @@ export function SiteNav() {
   const isHome = pathname === "/";
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [pastHero, setPastHero] = useState(false);
+  const [heroVisible, setHeroVisible] = useState(isHome);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -31,116 +43,154 @@ export function SiteNav() {
   }, [menuOpen]);
 
   useEffect(() => {
-    if (!isHome) {
-      setPastHero(true);
-      return;
-    }
+    if (!isHome) return;
 
     const sentinel = document.querySelector(".hero-scroll-sentinel");
     if (!sentinel) {
-      setPastHero(false);
-      return;
+      const frame = requestAnimationFrame(() => setHeroVisible(false));
+      return () => cancelAnimationFrame(frame);
     }
 
+    // Overlay while the hero's end marker is still below the nav band —
+    // intersecting (crossing the viewport) or parked below the fold both count.
     const observer = new IntersectionObserver(
-      ([entry]) => setPastHero(!entry.isIntersecting),
-      { threshold: 0, rootMargin: "-68px 0px 0px 0px" },
+      ([entry]) => setHeroVisible(entry.boundingClientRect.top > 96),
+      { threshold: [0, 1] },
     );
 
     observer.observe(sentinel);
-    return () => observer.disconnect();
+
+    const onScroll = () => {
+      const top = sentinel.getBoundingClientRect().top;
+      setHeroVisible(top > 96);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
   }, [isHome]);
 
-  const overlayNav = isHome && !pastHero;
+  const overlayNav = isHome && heroVisible;
 
   return (
     <header
       className={`site-nav ${overlayNav ? "site-nav-overlay" : "site-nav-solid"}`}
     >
-      <nav
-        className="mx-auto flex h-[4.25rem] max-w-[1280px] items-center justify-between px-5 lg:h-[4.75rem] lg:px-10"
-        aria-label="Main navigation"
-      >
+      <nav className="site-nav-inner" aria-label="Main navigation">
         <Link href="/" className="site-nav-brand">
-          <SealImage
+          <Image
+            src="/logo.png"
             alt=""
-            width={32}
-            height={32}
-            decorative
-            className={`site-nav-seal ${overlayNav ? "site-nav-seal-overlay" : ""}`}
+            width={36}
+            height={36}
+            priority
+            className="brand-emblem site-nav-emblem"
           />
           <span className="site-nav-wordmark">Munique</span>
+          <span className="site-nav-year">’26</span>
         </Link>
 
-        <div className="hidden items-center gap-7 lg:flex">
+        <div className="site-nav-links">
           {navLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="site-nav-link">
+            <Link
+              key={link.href}
+              href={link.href}
+              className="site-nav-link"
+              aria-current={pathname === link.href ? "page" : undefined}
+            >
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/register"
-            className={`btn-primary btn-primary-nav ${overlayNav ? "btn-primary-nav-overlay" : ""}`}
-          >
+          <Link href="/register" className="btn btn-signal site-nav-cta">
             Register
           </Link>
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
-          <Link
-            href="/register"
-            className={`btn-primary btn-primary-nav ${overlayNav ? "btn-primary-nav-overlay" : ""}`}
-          >
+          <Link href="/register" className="btn btn-signal site-nav-cta">
             Register
           </Link>
           <button
             type="button"
             className="site-nav-menu-btn"
             aria-expanded={menuOpen}
-            aria-controls="mobile-nav-dialog"
+            aria-controls="site-menu-dialog"
+            aria-label="Open menu"
             onClick={() => setMenuOpen(true)}
           >
-            Menu
+            <span className="bar" aria-hidden />
+            <span className="bar" aria-hidden />
           </button>
         </div>
       </nav>
 
       <dialog
         ref={dialogRef}
-        id="mobile-nav-dialog"
-        className="site-nav-dialog"
+        id="site-menu-dialog"
+        className="menu-dialog"
         onClose={() => setMenuOpen(false)}
-        onClick={(event) => {
-          if (event.target === dialogRef.current) {
-            setMenuOpen(false);
-          }
-        }}
       >
-        <div className="flex items-center justify-between border-b border-ink-navy-soft/30 px-6 py-4">
-          <span className="font-display text-lg font-semibold tracking-wide">
-            Navigate
+        <div className="menu-head">
+          <span className="site-nav-brand" style={{ color: "inherit" }}>
+            <Image
+              src="/logo.png"
+              alt=""
+              width={32}
+              height={32}
+              className="brand-emblem menu-head-emblem emblem-on-dark"
+            />
+            <span className="site-nav-wordmark">Munique</span>
           </span>
           <button
             type="button"
-            className="min-h-11 min-w-11 text-sm font-medium text-ink-navy-soft"
+            className="menu-close"
             onClick={() => setMenuOpen(false)}
           >
-            Close
+            Close ✕
           </button>
         </div>
-        <ul className="m-0 list-none p-0">
-          {navLinks.map((link) => (
-            <li key={link.href} className="border-b border-ink-navy-soft/20">
+
+        <ul className="menu-list">
+          {menuLinks.map((link, index) => (
+            <li
+              key={link.href}
+              className="menu-item"
+              style={{ "--menu-i": index } as CSSProperties}
+            >
               <Link
                 href={link.href}
-                className="block px-6 py-4 text-base font-medium text-ink-navy no-underline"
+                className="menu-link"
+                aria-current={pathname === link.href ? "page" : undefined}
                 onClick={() => setMenuOpen(false)}
               >
                 {link.label}
+                <span className="menu-index" aria-hidden>
+                  {link.href === "/" ? "•" : ""}
+                </span>
               </Link>
             </li>
           ))}
         </ul>
+
+        <div className="menu-foot">
+          <Link
+            href="/register"
+            className="btn btn-signal"
+            onClick={() => setMenuOpen(false)}
+          >
+            Register for Edition I
+          </Link>
+          <a
+            href="https://instagram.com/munique_2026"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mono-label mono-label-dark link-wipe"
+          >
+            @munique_2026
+          </a>
+        </div>
       </dialog>
     </header>
   );

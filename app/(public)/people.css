@@ -1,0 +1,470 @@
+/* ═══════════════════════════════════════════════════════════════
+   MUNIQUE ’26 — PEOPLE cluster (“Officers of the Assembly”)
+   Executive Board · Secretariat · home-page secretariat preview.
+   Prefix: ppl-
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Section scaffolding ── */
+
+.ppl-section {
+  padding-block: clamp(2.5rem, 6vw, 4.25rem);
+}
+
+.ppl-section + .ppl-section {
+  padding-top: 0;
+}
+
+.ppl-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid var(--line-strong);
+  margin-bottom: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+/* ── Hall band seal watermark ── */
+
+.ppl-hall-seal {
+  position: absolute;
+  top: 50%;
+  right: -5rem;
+  width: clamp(15rem, 32vw, 26rem);
+  height: auto;
+  transform: translateY(-50%);
+  opacity: 0.5;
+}
+
+/* ── Duotone portrait treatment ── */
+
+.ppl-portrait,
+.ppl-mini-portrait {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--paper-2);
+}
+
+.ppl-portrait img,
+.ppl-mini-portrait img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.06);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.ppl-duotone {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--cobalt);
+  mix-blend-mode: multiply;
+  opacity: 0.8;
+  transition: opacity var(--dur-med) var(--ease-out);
+}
+
+.ppl-duotone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--cobalt-bright);
+  mix-blend-mode: soft-light;
+  opacity: 0.55;
+}
+
+/* ── Monogram fallback (no photo yet) ── */
+
+.ppl-monogram {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--paper-2);
+}
+
+.ppl-monogram-letters {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--cobalt) 42%, var(--paper-2));
+}
+
+.ppl-monogram-letters--sm {
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+}
+
+.ppl-monogram-note {
+  position: absolute;
+  left: 0.875rem;
+  bottom: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* ── Editorial roster grid ── */
+
+.ppl-roster {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(1.25rem, 2.5vw, 2rem);
+}
+
+.ppl-cell {
+  display: flex;
+}
+
+@media (min-width: 640px) {
+  .ppl-roster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ppl-cell--wide {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ppl-roster {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .ppl-cell {
+    grid-column: span 2;
+  }
+
+  .ppl-cell--wide {
+    grid-column: span 3;
+  }
+}
+
+/* ── Portrait plate ── */
+
+.ppl-plate {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  transition: border-color var(--dur-fast) var(--ease-swift);
+}
+
+.ppl-plate:hover {
+  border-color: var(--line-strong);
+}
+
+.ppl-plate .ppl-portrait {
+  aspect-ratio: 4 / 5;
+}
+
+.ppl-plate:hover .ppl-duotone,
+.ppl-mini:hover .ppl-duotone {
+  opacity: 0.45;
+}
+
+.ppl-plate:hover .ppl-portrait img,
+.ppl-mini:hover .ppl-mini-portrait img {
+  transform: scale(1.04);
+}
+
+.ppl-plate-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 1px solid var(--line);
+  padding: 1rem 1.125rem 1.375rem;
+}
+
+.ppl-plate-name {
+  letter-spacing: 0.02em;
+}
+
+.ppl-cell--wide .ppl-plate-name {
+  font-size: clamp(1.625rem, 3.2vw, 2.375rem);
+}
+
+.ppl-plate-tagrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.ppl-plate-desc {
+  font-size: 0.9375rem;
+  margin-top: 0.25rem;
+}
+
+/* ── Founder feature row (ink plate) ── */
+
+.ppl-feature-stack {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.ppl-feature {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--on-dark);
+}
+
+.ppl-feature-media {
+  aspect-ratio: 4 / 5;
+}
+
+.ppl-feature .ppl-monogram {
+  background: var(--cobalt-deep);
+}
+
+.ppl-feature .ppl-monogram-letters {
+  color: color-mix(in oklab, var(--on-dark) 32%, var(--cobalt-deep));
+}
+
+.ppl-feature .ppl-monogram-note {
+  color: var(--on-dark-dim);
+}
+
+.ppl-feature-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.875rem;
+  border-top: 1px solid var(--line-dark);
+  padding: clamp(1.5rem, 4vw, 3rem);
+}
+
+.ppl-feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ppl-feature-name {
+  margin: 0;
+}
+
+.ppl-feature-desc {
+  max-width: 60ch;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--line-dark);
+  padding-top: 1.25rem;
+  line-height: 1.7;
+  color: var(--on-dark-dim);
+  text-wrap: pretty;
+}
+
+.ppl-feature-seal {
+  position: absolute;
+  right: -4rem;
+  bottom: -6rem;
+  display: none;
+  width: 24rem;
+  height: 24rem;
+  color: var(--on-dark);
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+@media (min-width: 900px) {
+  .ppl-feature {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+
+  .ppl-feature-media {
+    aspect-ratio: auto;
+    min-height: 28rem;
+  }
+
+  .ppl-feature-body {
+    border-top: 0;
+    border-left: 1px solid var(--line-dark);
+  }
+
+  .ppl-feature-seal {
+    display: block;
+  }
+}
+
+/* ── Empty roster — gazette stamp ── */
+
+.ppl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  min-height: 18rem;
+  text-align: center;
+}
+
+.ppl-stamp {
+  max-width: 100%;
+  border: 1px solid var(--line-strong);
+  outline: 1px solid var(--line-strong);
+  outline-offset: 4px;
+  padding: 1rem 1.75rem;
+  font-family: var(--font-mono);
+  font-size: clamp(0.875rem, 1.6vw, 1.0625rem);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: var(--ink-2);
+  transform: rotate(-1.5deg);
+}
+
+/* ── Cross-desk ledger (page foot) ── */
+
+.ppl-cross {
+  padding-top: 0;
+}
+
+.ppl-cross-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.375rem 1.25rem;
+  padding: 1.25rem 0.25rem;
+}
+
+.ppl-cross-kicker {
+  flex: 0 0 10rem;
+}
+
+.ppl-cross-title {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.ppl-cross-arrow {
+  margin-left: auto;
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: transform var(--dur-med) var(--ease-out);
+}
+
+.ppl-cross-link:hover .ppl-cross-arrow,
+.ppl-cross-link:focus-visible .ppl-cross-arrow {
+  transform: translateX(8px);
+}
+
+/* ── Home-page secretariat preview (ink band) ── */
+
+.ppl-preview {
+  background: var(--ink);
+  color: var(--on-dark);
+}
+
+.ppl-preview-inner {
+  padding-block: clamp(3rem, 7vw, 5.5rem);
+}
+
+.ppl-preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  border-bottom: 1px solid var(--line-dark);
+  padding-bottom: 1.25rem;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.ppl-preview-title {
+  margin-top: 0.375rem;
+  color: var(--on-dark);
+}
+
+.ppl-preview-link {
+  color: var(--on-dark);
+}
+
+.ppl-preview-empty {
+  max-width: 60ch;
+  color: var(--on-dark-dim);
+}
+
+.ppl-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+@media (min-width: 768px) {
+  .ppl-preview-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.ppl-mini-portrait {
+  aspect-ratio: 1;
+  border: 1px solid var(--line-dark);
+  background: var(--cobalt-deep);
+}
+
+.ppl-mini .ppl-monogram {
+  background: var(--cobalt-deep);
+}
+
+.ppl-mini .ppl-monogram-letters {
+  color: color-mix(in oklab, var(--on-dark) 32%, var(--cobalt-deep));
+}
+
+.ppl-mini-name {
+  margin-top: 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--on-dark);
+}
+
+.ppl-mini-role {
+  margin-top: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-dark-dim);
+}
+
+/* ── Reduced motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ppl-portrait img,
+  .ppl-mini-portrait img,
+  .ppl-duotone,
+  .ppl-cross-arrow {
+    transition: none;
+  }
+
+  .ppl-plate:hover .ppl-portrait img,
+  .ppl-mini:hover .ppl-mini-portrait img {
+    transform: none;
+  }
+
+  .ppl-cross-link:hover .ppl-cross-arrow,
+  .ppl-cross-link:focus-visible .ppl-cross-arrow {
+    transform: none;
+  }
+}

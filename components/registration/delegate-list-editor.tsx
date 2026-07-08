@@ -75,7 +75,7 @@ export function DelegateListEditor({ members, onChange }: DelegateListEditorProp
           </div>
           <button
             type="button"
-            className="registration-btn-back min-h-[2.75rem] justify-self-start sm:justify-self-auto"
+            className="btn btn-outline registration-member-remove"
             onClick={() => removeMember(index)}
             disabled={members.length <= 1}
           >
@@ -86,7 +86,7 @@ export function DelegateListEditor({ members, onChange }: DelegateListEditorProp
 
       <button
         type="button"
-        className="registration-btn-back registration-add-member min-h-[2.75rem]"
+        className="btn btn-outline registration-add-member"
         onClick={addMember}
         disabled={totalDelegates >= DELEGATION_MAX_DELEGATES}
       >

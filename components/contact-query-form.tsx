@@ -12,32 +12,33 @@ export function ContactQueryForm() {
 
   if (state?.success) {
     return (
-      <p className="mt-6 rounded-sm border border-[rgba(63,107,74,0.35)] bg-[rgba(63,107,74,0.08)] px-4 py-3 text-sm text-ink-navy">
-        {state.success}
-      </p>
+      <div className="story-form-success" role="status">
+        <p className="story-form-success-label">Query lodged</p>
+        <p className="story-form-success-text">{state.success}</p>
+      </div>
     );
   }
 
   return (
-    <form action={action} className="mt-8 space-y-4">
+    <form action={action} className="story-form">
       {state?.error && (
-        <p className="text-sm text-[var(--status-error)]" role="alert">
+        <p className="story-form-error" role="alert">
           {state.error}
         </p>
       )}
-      <div>
-        <label htmlFor="submitter_name" className="mb-1 block text-sm font-medium">
+      <div className="story-field">
+        <label htmlFor="submitter_name" className="story-label">
           Your name
         </label>
         <input
           id="submitter_name"
           name="submitter_name"
           required
-          className="w-full rounded-sm border border-[rgba(46,64,102,0.25)] bg-paper-white px-3 py-2 text-base"
+          className="story-input"
         />
       </div>
-      <div>
-        <label htmlFor="submitter_email" className="mb-1 block text-sm font-medium">
+      <div className="story-field">
+        <label htmlFor="submitter_email" className="story-label">
           Email
         </label>
         <input
@@ -45,33 +46,28 @@ export function ContactQueryForm() {
           name="submitter_email"
           type="email"
           required
-          className="w-full rounded-sm border border-[rgba(46,64,102,0.25)] bg-paper-white px-3 py-2 text-base"
+          className="story-input"
         />
       </div>
-      <div>
-        <label htmlFor="registration_id" className="mb-1 block text-sm font-medium">
+      <div className="story-field">
+        <label htmlFor="registration_id" className="story-label">
           Registration ID (optional)
         </label>
         <input
           id="registration_id"
           name="registration_id"
           placeholder="MUN-A7F2"
-          className="w-full rounded-sm border border-[rgba(46,64,102,0.25)] bg-paper-white px-3 py-2 font-mono text-base"
+          className="story-input story-input-mono"
         />
       </div>
-      <div>
-        <label htmlFor="subject" className="mb-1 block text-sm font-medium">
+      <div className="story-field">
+        <label htmlFor="subject" className="story-label">
           Subject
         </label>
-        <input
-          id="subject"
-          name="subject"
-          required
-          className="w-full rounded-sm border border-[rgba(46,64,102,0.25)] bg-paper-white px-3 py-2 text-base"
-        />
+        <input id="subject" name="subject" required className="story-input" />
       </div>
-      <div>
-        <label htmlFor="body" className="mb-1 block text-sm font-medium">
+      <div className="story-field">
+        <label htmlFor="body" className="story-label">
           Message
         </label>
         <textarea
@@ -79,10 +75,14 @@ export function ContactQueryForm() {
           name="body"
           required
           rows={5}
-          className="w-full rounded-sm border border-[rgba(46,64,102,0.25)] bg-paper-white px-3 py-2 text-base"
+          className="story-textarea"
         />
       </div>
-      <button type="submit" className="btn-primary" disabled={pending}>
+      <button
+        type="submit"
+        className="btn btn-signal story-submit"
+        disabled={pending}
+      >
         {pending ? "Submitting…" : "Submit query"}
       </button>
     </form>

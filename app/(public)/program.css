@@ -1,0 +1,354 @@
+/* ═══════════════════════════════════════════════════════════════
+   PROGRAM cluster — committees · schedule · study guides
+   Class prefix: prog-
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Shared scaffolding ── */
+
+.prog-section {
+  padding-block: clamp(2.75rem, 6vw, 4.5rem) clamp(2rem, 5vw, 3.5rem);
+}
+
+.prog-hall-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* lift btn-sm to a full 44px touch target inside this cluster */
+.prog-hall-actions .btn-sm,
+.prog-actions .btn-sm,
+.prog-doc-status .btn-sm,
+.prog-ink-actions .btn-sm {
+  min-height: 2.75rem;
+}
+
+.prog-foot {
+  display: flex;
+  padding-block: 0 clamp(3rem, 7vw, 5rem);
+}
+
+.prog-back.arrow-cta:hover .arrow,
+.prog-back.arrow-cta:focus-visible .arrow {
+  transform: translateX(-6px);
+}
+
+.prog-ledger-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-bottom: 0.875rem;
+}
+
+.prog-ledger-head p {
+  margin: 0;
+}
+
+/* ── Committees — the docket ── */
+
+.prog-row-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  padding-block: clamp(2rem, 5vw, 3.25rem);
+}
+
+@media (min-width: 640px) {
+  .prog-row-grid {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: clamp(1.5rem, 3.5vw, 2.75rem);
+  }
+}
+
+.prog-plate {
+  display: grid;
+  place-items: center;
+  width: clamp(4.5rem, 9vw, 6.75rem);
+  aspect-ratio: 1;
+  padding: 0.625rem;
+  border: 1px solid var(--line-strong);
+  background: var(--paper);
+  color: var(--ink);
+  transition:
+    background-color var(--dur-med) var(--ease-out),
+    border-color var(--dur-med) var(--ease-out),
+    color var(--dur-med) var(--ease-out);
+}
+
+.prog-plate img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.prog-plate-abbr {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.prog-row:hover .prog-plate,
+.prog-row:focus-within .prog-plate {
+  background: var(--cobalt);
+  border-color: var(--cobalt);
+  color: var(--on-dark);
+}
+
+.prog-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.625rem 1.5rem;
+}
+
+.prog-name {
+  margin: 0;
+}
+
+.prog-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.prog-desc {
+  margin: 0.875rem 0 0;
+}
+
+.prog-agenda {
+  display: grid;
+  gap: 0.375rem;
+  margin-top: clamp(1rem, 2.5vw, 1.5rem);
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.prog-agenda p {
+  margin: 0;
+}
+
+.prog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-top: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.prog-guide-pending {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* empty docket — an official notice, not an apology */
+.prog-empty {
+  display: grid;
+  gap: 0.625rem;
+  padding: clamp(2rem, 5vw, 3.25rem);
+}
+
+.prog-empty p {
+  margin: 0;
+}
+
+.prog-empty-line {
+  max-width: 26ch;
+}
+
+/* ── Schedule — order of proceedings ── */
+
+.prog-days {
+  border-top: 1px solid var(--line-strong);
+}
+
+.prog-day {
+  padding-block: clamp(2.25rem, 5vw, 3.5rem);
+  border-bottom: 1px solid var(--line);
+}
+
+.prog-day-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+}
+
+.prog-day-n {
+  font-size: clamp(2.25rem, 6vw, 4rem);
+}
+
+.prog-day-s {
+  font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+  color: var(--cobalt);
+}
+
+.prog-times {
+  margin: clamp(1.25rem, 3vw, 1.75rem) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line-strong);
+}
+
+.prog-time-row {
+  display: grid;
+  grid-template-columns: clamp(4rem, 12vw, 7rem) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 1rem;
+  padding-block: 0.875rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.prog-time {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.prog-event {
+  font-weight: 500;
+}
+
+.prog-day-note {
+  margin: 1rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.prog-venue-wrap {
+  padding-bottom: clamp(2.5rem, 6vw, 4rem);
+}
+
+/* ── Ink plate — venue block + official notices ── */
+
+.prog-ink {
+  position: relative;
+  display: grid;
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  overflow: hidden;
+  padding: clamp(2rem, 5vw, 3.5rem);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--on-dark);
+}
+
+.prog-ink > :not(.prog-ink-seal) {
+  position: relative;
+  z-index: 1;
+}
+
+.prog-ink-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line-dark);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-dark-dim);
+}
+
+.prog-ink-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.prog-ink-line {
+  margin: 0;
+  max-width: 22ch;
+  font-size: clamp(2rem, 5.5vw, 3.75rem);
+}
+
+.prog-ink-copy {
+  margin: 0;
+  max-width: 58ch;
+  line-height: 1.65;
+  color: var(--on-dark-dim);
+}
+
+.prog-ink-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.prog-ink-seal {
+  position: absolute;
+  right: clamp(-4rem, -6vw, -2rem);
+  bottom: clamp(-5rem, -8vw, -3rem);
+  width: clamp(13rem, 26vw, 19rem);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+/* ── Study guides — document ledger ── */
+
+.prog-doc-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2rem);
+  padding-block: clamp(1.125rem, 2.5vw, 1.5rem);
+}
+
+@media (max-width: 560px) {
+  .prog-doc-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .prog-doc-status {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+.prog-doc-index {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  transition: color var(--dur-fast) var(--ease-swift);
+}
+
+.ledger-row:hover .prog-doc-index {
+  color: var(--cobalt);
+}
+
+.prog-doc-title {
+  margin: 0;
+}
+
+.prog-doc-sub {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}

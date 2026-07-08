@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SealImage } from "@/components/seal-image";
+import { SealLine } from "@/components/seal-line";
 
 type SealStampProps = {
   size?: number;
@@ -34,12 +34,7 @@ export function SealStamp({
       className={`seal-stamp ${ready ? "seal-stamp-animate" : ""}`}
       aria-hidden="true"
     >
-      <SealImage
-        alt="Munique 2026 official seal"
-        width={size}
-        height={size}
-        decorative
-      />
+      <SealLine width={size} height={size} />
     </div>
   );
 }

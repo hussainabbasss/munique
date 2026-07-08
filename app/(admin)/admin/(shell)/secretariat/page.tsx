@@ -11,6 +11,10 @@ export default async function SecretariatAdminPage() {
     .from("secretariat_members")
     .select("*")
     .order("display_order");
+  const { data: committees } = await supabase
+    .from("committees")
+    .select("id,name")
+    .order("display_order");
 
   const portraitUrls: Record<string, string | null> = {};
   for (const member of data ?? []) {
@@ -23,10 +27,14 @@ export default async function SecretariatAdminPage() {
     <section className="admin-panel">
       <h1 className="admin-panel-title">Secretariat</h1>
       <p className="admin-panel-lead">
-        Names, roles, and portraits shown on the homepage and{" "}
-        <code>/secretariat</code> page.
+        Chairs with portraits, committee assignment, and bios shown on{" "}
+        <code>/secretariat</code> and linked from <code>/committees</code>.
       </p>
-      <SecretariatManager members={data ?? []} portraitUrls={portraitUrls} />
+      <SecretariatManager
+        members={data ?? []}
+        portraitUrls={portraitUrls}
+        committees={committees ?? []}
+      />
     </section>
   );
 }

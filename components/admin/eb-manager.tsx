@@ -2,20 +2,19 @@
 
 import { useActionState, useState } from "react";
 import {
-  deleteSecretariatMemberAction,
-  saveSecretariatMemberAction,
-  uploadSecretariatPortraitAction,
-} from "@/lib/admin/actions/secretariat";
-import type { Committee, SecretariatMember } from "@/lib/types/admin";
+  deleteEbMemberAction,
+  saveEbMemberAction,
+  uploadEbPortraitAction,
+} from "@/lib/admin/actions/eb";
+import type { EbMember } from "@/lib/types/admin";
 
 type Props = {
-  members: SecretariatMember[];
+  members: EbMember[];
   portraitUrls: Record<string, string | null>;
-  committees: Pick<Committee, "id" | "name">[];
 };
 
-export function SecretariatManager({ members, portraitUrls, committees }: Props) {
-  const [editing, setEditing] = useState<SecretariatMember | null>(null);
+export function EbManager({ members, portraitUrls }: Props) {
+  const [editing, setEditing] = useState<EbMember | null>(null);
   const [creating, setCreating] = useState(false);
 
   const [state, saveAction, saving] = useActionState(
@@ -23,7 +22,7 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
       _prev: { success?: string; error?: string } | null,
       formData: FormData,
     ) => {
-      const result = await saveSecretariatMemberAction(formData);
+      const result = await saveEbMemberAction(formData);
       if (result.success) {
         setEditing(null);
         setCreating(false);
@@ -37,7 +36,7 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
     async (
       _prev: { success?: string; error?: string } | null,
       formData: FormData,
-    ) => uploadSecretariatPortraitAction(formData),
+    ) => uploadEbPortraitAction(formData),
     null,
   );
 
@@ -52,14 +51,14 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
             setEditing(null);
           }}
         >
-          + Add member
+          + Add EB member
         </button>
       </div>
 
       {(creating || editing) && (
         <section className="admin-panel" style={{ marginBottom: "1.25rem" }}>
           <h2 className="admin-panel-title">
-            {editing ? `Edit ${editing.full_name}` : "New secretariat member"}
+            {editing ? `Edit ${editing.full_name}` : "New EB member"}
           </h2>
           {state?.success && (
             <p className="admin-toast admin-toast-success">{state.success}</p>
@@ -68,9 +67,7 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
             <p className="admin-toast admin-toast-error">{state.error}</p>
           )}
           <form action={saveAction} className="admin-form-grid">
-            {editing?.id && (
-              <input type="hidden" name="id" value={editing.id} />
-            )}
+            {editing?.id && <input type="hidden" name="id" value={editing.id} />}
             <div className="admin-field">
               <label htmlFor="full_name">Full name</label>
               <input
@@ -86,23 +83,7 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
                 id="role_title"
                 name="role_title"
                 defaultValue={editing?.role_title ?? ""}
-                placeholder="e.g. Secretary-General"
               />
-            </div>
-            <div className="admin-field">
-              <label htmlFor="committee_id">Assigned committee</label>
-              <select
-                id="committee_id"
-                name="committee_id"
-                defaultValue={editing?.committee_id ?? ""}
-              >
-                <option value="">Not assigned</option>
-                {committees.map((committee) => (
-                  <option key={committee.id} value={committee.id}>
-                    {committee.name}
-                  </option>
-                ))}
-              </select>
             </div>
             <div className="admin-field">
               <label htmlFor="description">Description</label>
@@ -110,7 +91,6 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
                 id="description"
                 name="description"
                 defaultValue={editing?.description ?? ""}
-                placeholder="Brief biography or notes."
               />
             </div>
             <div className="admin-field">
@@ -121,6 +101,15 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
                 type="number"
                 defaultValue={editing?.display_order ?? 0}
               />
+            </div>
+            <div className="admin-checkbox-row">
+              <input
+                id="is_founder"
+                name="is_founder"
+                type="checkbox"
+                defaultChecked={editing?.is_founder ?? false}
+              />
+              <label htmlFor="is_founder">Founder (featured at top on /eb)</label>
             </div>
             <div className="admin-checkbox-row">
               <input
@@ -187,7 +176,7 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
               <th>Portrait</th>
               <th>Name</th>
               <th>Role</th>
-              <th>Committee</th>
+              <th>Founder</th>
               <th>Published</th>
               <th>Actions</th>
             </tr>
@@ -196,7 +185,7 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
             {members.length === 0 ? (
               <tr>
                 <td colSpan={7} className="admin-empty">
-                  No secretariat members yet
+                  No EB members yet
                 </td>
               </tr>
             ) : (
@@ -219,12 +208,7 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
                   </td>
                   <td>{member.full_name}</td>
                   <td>{member.role_title || "—"}</td>
-                  <td>
-                    {member.committee_id
-                      ? committees.find((committee) => committee.id === member.committee_id)
-                          ?.name ?? "—"
-                      : "—"}
-                  </td>
+                  <td>{member.is_founder ? "Yes" : "No"}</td>
                   <td>{member.is_published ? "Yes" : "No"}</td>
                   <td>
                     <button
@@ -240,7 +224,7 @@ export function SecretariatManager({ members, portraitUrls, committees }: Props)
                     <button
                       type="button"
                       className="btn-admin-secondary btn-admin-danger"
-                      onClick={() => deleteSecretariatMemberAction(member.id)}
+                      onClick={() => deleteEbMemberAction(member.id)}
                     >
                       Del
                     </button>

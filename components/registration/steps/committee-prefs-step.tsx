@@ -15,7 +15,7 @@ export function CommitteePrefsStep({
 }: CommitteePrefsStepProps) {
   if (committees.length === 0) {
     return (
-      <p className="text-sm leading-relaxed text-ink-navy-soft">
+      <p className="registration-empty-note">
         Committee preferences are unavailable right now. Please contact the
         Executive Board before continuing.
       </p>

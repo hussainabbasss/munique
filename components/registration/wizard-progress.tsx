@@ -9,13 +9,12 @@ export function WizardProgress({
   totalSteps,
   stepName,
 }: WizardProgressProps) {
-  const progressPct = Math.round((currentStep / totalSteps) * 100);
-
   return (
     <div className="registration-progress" aria-label="Registration progress">
       <div className="registration-progress-meta">
         <p className="registration-progress-label">
-          Step {currentStep} of {totalSteps}
+          Step {String(currentStep).padStart(2, "0")} /{" "}
+          {String(totalSteps).padStart(2, "0")}
         </p>
         <p className="registration-progress-step-name">{stepName}</p>
       </div>
@@ -27,10 +26,14 @@ export function WizardProgress({
         aria-valuemax={totalSteps}
         aria-label={`Step ${currentStep} of ${totalSteps}`}
       >
-        <div
-          className="registration-progress-fill"
-          style={{ width: `${progressPct}%` }}
-        />
+        {Array.from({ length: totalSteps }, (_, index) => (
+          <span
+            key={index}
+            className={`registration-progress-seg${
+              index < currentStep ? " registration-progress-seg-done" : ""
+            }`}
+          />
+        ))}
       </div>
     </div>
   );
