@@ -16,8 +16,8 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-/** Resend's built-in sender — no custom domain or SMTP needed. */
-const FROM = "Munique 2026 <onboarding@resend.dev>";
+/** Verified Resend sending domain (munique.systemsummit.online). */
+const FROM = "Munique 2026 <registration@munique.systemsummit.online>";
 
 function escapeHtml(text: string) {
   return text
