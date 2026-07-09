@@ -12,16 +12,19 @@
 
 ## Design Language — “The Assembly” (July 2026 redesign)
 
-International Typographic Style rebuilt for 2026. An assembly hall, not a scrapbook:
-drenched cobalt fields, procedural paper, near-black ink, one live signal red-orange.
-Monumental condensed placard type over a civic body face with procedural mono details.
+International Typographic Style rebuilt for 2026, painted in the Munique brand
+palette (parchment / deep navy / violet — matching the Instagram identity):
+navy drench fields on a warm parchment body, with a violet accent for CTAs and
+live markers. Monumental condensed placard type over a civic body face with mono details.
 
-- **Palette (OKLCH, in `app/globals.css`):** `--cobalt` (drench surfaces), `--ink`,
-  `--paper` (cool, never warm/cream), `--paper-2`, `--signal` (CTAs/live markers —
-  always ink text on signal), `--on-dark` / `--on-dark-dim` for text on dark fields.
+- **Palette (OKLCH, in `app/globals.css`):** `--cobalt` (deep-navy drench surfaces —
+  hero + `.hall` bands), `--ink` (near-black navy — text + dark bands), `--paper` /
+  `--paper-2` (warm parchment body, per the brand — intentionally warm here),
+  `--signal` (violet accent for CTAs/live markers — cream `--on-dark` text on it,
+  NOT ink), `--on-dark` / `--on-dark-dim` (warm cream text on navy).
 - **Type:** Big Shoulders (display placard caps) · Public Sans (body/UI) ·
   Spline Sans Mono (procedural labels, data, indices).
-- **Vocabulary:** hairline rules (`--line*`), `.hall` cobalt page headers, `.ledger`
+- **Vocabulary:** hairline rules (`--line*`), `.hall` navy page headers, `.ledger`
   row systems instead of card grids, `.plate` flat panels, sharp corners everywhere,
   zero box-shadows, `.btn-*` rectangular uppercase buttons, `.tag` mono chips.
 - **Motion:** wire ticker (status banner), `Reveal` scroll entrances
@@ -32,8 +35,10 @@ Monumental condensed placard type over a civic body face with procedural mono de
 
 ## Anti-References
 
-- The pre-2026 parchment/Cinzel/gold "dossier" look — fully retired; do not resurrect.
-- AI cream/sand body backgrounds; warm-tinted near-whites.
+- The pre-2026 Cinzel/gold "dossier" typography and rounded-card layout — retired.
+  (The parchment body colour returned in July 2026 as the brand palette, but on the
+  new Assembly structure — sharp, hairline-ruled, condensed placard type. Parchment
+  here is the deliberate brand identity, not the AI-default warm near-white.)
 - Generic SaaS card grids, pill buttons, rounded cards, soft drop shadows, glassmorphism.
 - Stock UN/diplomacy hero photography (the hero is an original seating-chart SVG scene).
 - Eyebrow kickers above every section; numbered section scaffolding outside true sequences.

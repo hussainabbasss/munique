@@ -3,22 +3,22 @@
 /* ═══════════════════════════════════════════════════════════════
    MUNIQUE ’26 — “THE ASSEMBLY”
    International Typographic Style, rebuilt for 2026.
-   Cobalt field · procedural paper · ink · one live signal.
+   Brand palette: parchment field · deep navy ink · violet accent.
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Core palette ── */
-  --cobalt: oklch(43% 0.19 264);
-  --cobalt-deep: oklch(34% 0.15 264);
-  --cobalt-bright: oklch(56% 0.2 264);
-  --ink: oklch(19% 0.025 264);
-  --ink-2: oklch(35% 0.03 264);
-  --paper: oklch(96.5% 0.004 264);
-  --paper-2: oklch(92.5% 0.008 264);
-  --signal: oklch(62% 0.215 33);
-  --signal-bright: oklch(69% 0.2 33);
-  --on-dark: oklch(97% 0.005 264);
-  --on-dark-dim: oklch(87% 0.02 264);
+  /* ── Core palette — Munique brand (parchment / navy / violet) ── */
+  --cobalt: oklch(31% 0.09 264);
+  --cobalt-deep: oklch(24% 0.07 264);
+  --cobalt-bright: oklch(42% 0.12 264);
+  --ink: oklch(25% 0.06 264);
+  --ink-2: oklch(40% 0.055 264);
+  --paper: oklch(91% 0.032 86);
+  --paper-2: oklch(86.5% 0.04 84);
+  --signal: oklch(52% 0.13 300);
+  --signal-bright: oklch(66% 0.15 300);
+  --on-dark: oklch(93% 0.022 86);
+  --on-dark-dim: oklch(82% 0.03 84);
 
   /* ── Hairlines ── */
   --line: color-mix(in oklab, var(--ink) 15%, transparent);
@@ -260,7 +260,7 @@ body {
 
 .btn-signal {
   background: var(--signal);
-  color: var(--ink);
+  color: var(--on-dark);
 }
 
 .btn-signal:hover {
@@ -403,7 +403,7 @@ body {
 .tag-signal {
   background: var(--signal);
   border-color: var(--signal);
-  color: var(--ink);
+  color: var(--on-dark);
 }
 
 .tag-dark {
