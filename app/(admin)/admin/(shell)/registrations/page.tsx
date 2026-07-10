@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { RegistrationsTable } from "@/components/admin/registrations-table";
 import { RegistrationsStaffBoard } from "@/components/admin/registrations-staff-board";
+import { RegistrationsTypeTabs } from "@/components/admin/registrations-type-tabs";
 import { getAdminUser, getSignedUrl } from "@/lib/admin/helpers";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 type Props = {
   searchParams: Promise<{
@@ -33,6 +35,8 @@ export default async function RegistrationsPage({ searchParams }: Props) {
 
   if (!isStaff && params.type && params.type !== "all") {
     query = query.eq("type", params.type);
+  } else if (!isStaff && !params.type) {
+    query = query.eq("type", "delegate");
   }
 
   if (!isStaff && params.q) {
@@ -61,27 +65,28 @@ export default async function RegistrationsPage({ searchParams }: Props) {
           Review registrations and confirm payment when verified.
         </p>
       ) : (
-        <form className="admin-filters" method="get">
-          <select name="type" defaultValue={params.type ?? "all"}>
-            <option value="all">All types</option>
-            <option value="delegate">Delegate</option>
-            <option value="delegation">Delegation</option>
-          </select>
-          <select name="payment" defaultValue={params.payment ?? "all"}>
-            <option value="all">All payments</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <input
-            name="q"
-            placeholder="Name or ID…"
-            defaultValue={params.q ?? ""}
-          />
-          <button type="submit" className="btn-admin-secondary">
-            Filter
-          </button>
-        </form>
+        <>
+          <Suspense fallback={null}>
+            <RegistrationsTypeTabs payment={params.payment} q={params.q} />
+          </Suspense>
+          <form className="admin-filters" method="get">
+            <input type="hidden" name="type" value={params.type ?? "delegate"} />
+            <select name="payment" defaultValue={params.payment ?? "all"}>
+              <option value="all">All payments</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <input
+              name="q"
+              placeholder="Name or ID…"
+              defaultValue={params.q ?? ""}
+            />
+            <button type="submit" className="btn-admin-secondary">
+              Filter
+            </button>
+          </form>
+        </>
       )}
 
       {isStaff ? (

@@ -15,14 +15,14 @@ export function validateDelegateAbout(draft: DelegateDraft): string | null {
   if (!draft.email.trim() || !EMAIL_RE.test(draft.email.trim())) {
     return "A valid email is required.";
   }
-  if (!draft.school.trim()) return "School or institution is required.";
+  if (!draft.school.trim()) return "Delegation or group name is required.";
   return null;
 }
 
 export function validateDelegationSchoolHead(
   draft: DelegationDraft,
 ): string | null {
-  if (!draft.school.trim()) return "School or institution is required.";
+  if (!draft.school.trim()) return "Delegation or group name is required.";
   if (!draft.headName.trim()) return "Head delegate name is required.";
   if (!draft.headEmail.trim() || !EMAIL_RE.test(draft.headEmail.trim())) {
     return "A valid head delegate email is required.";

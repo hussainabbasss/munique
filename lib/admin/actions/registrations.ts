@@ -8,7 +8,6 @@ import {
   requireAdminUser,
   requireRegistrationStaffOrAdmin,
 } from "@/lib/admin/helpers";
-import { fetchActivePricing } from "@/lib/registration/queries";
 
 const PAYMENT_PROOF_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -166,26 +165,15 @@ export async function resendRegistrationEmailAction(registrationId: string) {
 
   const { data: reg } = await supabase
     .from("registrations")
-    .select("id, registration_id, head_email, fee_amount")
+    .select("id, registration_id, head_email")
     .eq("id", registrationId)
     .single();
 
   if (!reg) return { error: "Registration not found." };
 
-  const pricing = await fetchActivePricing();
-  if (!pricing) {
-    return { error: "Active pricing is not configured — cannot include bank details." };
-  }
-
   const emailResult = await sendRegistrationReceived({
     to: reg.head_email,
     registrationId: reg.registration_id,
-    payment: {
-      feeAmount: reg.fee_amount,
-      bankAccountTitle: pricing.bank_account_title,
-      bankDetails: pricing.bank_details,
-      paymentInstructions: pricing.payment_instructions,
-    },
   });
 
   if (!emailResult.ok) {

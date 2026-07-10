@@ -36,7 +36,7 @@ const DELEGATE_STEPS = [
 ] as const;
 
 const DELEGATION_STEPS = [
-  { title: "School & head delegate" },
+  { title: "Delegation & head" },
   { title: "Your delegation" },
   { title: "Committee preferences" },
   { title: "Payment" },

@@ -52,7 +52,7 @@ export function ReviewStep({
         <>
           <section className="registration-review-section">
             <div className="registration-review-heading">
-              <span>School &amp; head delegate</span>
+              <span>Delegation &amp; head</span>
               <button
                 type="button"
                 className="registration-review-edit"
@@ -63,7 +63,7 @@ export function ReviewStep({
             </div>
             <div className="registration-review-body">
               <div className="registration-review-row">
-                <span className="registration-review-key">School</span>
+                <span className="registration-review-key">Delegation</span>
                 <span className="registration-review-value">
                   {delegationDraft.school}
                 </span>

@@ -57,17 +57,16 @@ export function RegisterChooser({ pricing }: RegisterChooserProps) {
         <Link
           href="/register/delegation"
           className="registration-portal"
-          aria-label={`School Delegation — ${formatPkr(delegationFees.perDelegateFee)} per delegate. Register your institution's group.`}
+          aria-label={`Delegation — ${formatPkr(delegationFees.perDelegateFee)} per delegate. Register your delegation.`}
         >
-          <p className="registration-portal-kicker">Portal II — Schools</p>
-          <p className="registration-portal-title">School Delegation</p>
+          <p className="registration-portal-kicker">Portal II — Group</p>
+          <p className="registration-portal-title">Register your delegation</p>
           <p className="registration-portal-desc">
-            Register your institution&apos;s group.
+            Register your school, private, or independent delegation.
           </p>
           <ul className="registration-portal-spec" aria-hidden="true">
             <li>
-              For — schools, {DELEGATION_MIN_DELEGATES}–
-              {DELEGATION_MAX_DELEGATES} delegates
+              For — {DELEGATION_MIN_DELEGATES}–{DELEGATION_MAX_DELEGATES} delegates
             </li>
             <li>Need — head delegate · member list</li>
             <li>Need — payment proof screenshot</li>

@@ -90,6 +90,7 @@ export type Delegate = {
   email: string | null;
   is_head_delegate: boolean;
   display_order: number;
+  allotment_email_sent_at: string | null;
 };
 
 export type Allotment = {

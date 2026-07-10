@@ -1,16 +1,8 @@
 import { Resend } from "resend";
-import { formatPkr } from "@/lib/utils/format";
 
 export type EmailResult =
   | { ok: true; id?: string }
   | { ok: false; error: string };
-
-export type RegistrationEmailPayment = {
-  feeAmount: number;
-  bankAccountTitle: string;
-  bankDetails: string;
-  paymentInstructions: string;
-};
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -25,10 +17,6 @@ function escapeHtml(text: string) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-function formatMultiline(text: string) {
-  return escapeHtml(text).replace(/\n/g, "<br>");
 }
 
 function baseHtml(body: string) {
@@ -78,19 +66,11 @@ async function sendEmail(params: {
 export async function sendRegistrationReceived(params: {
   to: string;
   registrationId: string;
-  payment: RegistrationEmailPayment;
 }): Promise<EmailResult> {
   const html = baseHtml(`
     <p>Your registration has been received.</p>
     <p>Registration ID: <strong style="font-family: monospace;">${escapeHtml(params.registrationId)}</strong></p>
-    <p>Amount due: <strong>${escapeHtml(formatPkr(params.payment.feeAmount))}</strong></p>
-    <div style="margin: 1.5rem 0; padding: 1rem 1.125rem; background: rgba(22, 35, 63, 0.04); border-left: 3px solid #B4922E;">
-      <p style="margin: 0 0 0.75rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #2E4066;">Payment details</p>
-      <p style="margin: 0 0 0.5rem;"><strong>Account title</strong><br>${formatMultiline(params.payment.bankAccountTitle)}</p>
-      <p style="margin: 0 0 0.5rem;"><strong>Bank details</strong><br>${formatMultiline(params.payment.bankDetails)}</p>
-      <p style="margin: 0;"><strong>Instructions</strong><br>${formatMultiline(params.payment.paymentInstructions)}</p>
-    </div>
-    <p>Transfer the fee using the bank details above. Your registration is confirmed once staff verify your payment — you will receive another email when that happens.</p>
+    <p>We have received your payment screenshot and will review it shortly. You will receive another email once we have processed your payment.</p>
   `);
 
   return sendEmail({
@@ -126,14 +106,44 @@ export async function sendAllotmentIssued(params: {
 }): Promise<EmailResult> {
   const html = baseHtml(`
     <p>Your allotment has been issued.</p>
-    <p>Committee: <strong>${params.committee}</strong><br>
-    Country: <strong>${params.country}</strong></p>
+    <p>Committee: <strong>${escapeHtml(params.committee)}</strong><br>
+    Country: <strong>${escapeHtml(params.country)}</strong></p>
   `);
 
   return sendEmail({
     kind: "sendAllotmentIssued",
     to: params.to,
     subject: "Your allotment — Munique 2026",
+    html,
+  });
+}
+
+export async function sendDelegationAllotmentIssued(params: {
+  to: string;
+  groupName: string;
+  committee: string;
+  country: string;
+  memberNames: string[];
+  delegateCount: number;
+}): Promise<EmailResult> {
+  const membersHtml = params.memberNames
+    .map((name) => `<li>${escapeHtml(name)}</li>`)
+    .join("");
+
+  const html = baseHtml(`
+    <p>Your delegation&apos;s allotment has been issued.</p>
+    <p>Delegation: <strong>${escapeHtml(params.groupName)}</strong><br>
+    Committee: <strong>${escapeHtml(params.committee)}</strong><br>
+    Country: <strong>${escapeHtml(params.country)}</strong> (shared by all ${params.delegateCount} delegates)</p>
+    <p>Delegates in your delegation:</p>
+    <ul style="margin: 0; padding-left: 1.25rem;">${membersHtml}</ul>
+    <p>Each member of your delegation represents the same country in committee.</p>
+  `);
+
+  return sendEmail({
+    kind: "sendDelegationAllotmentIssued",
+    to: params.to,
+    subject: "Your delegation allotment — Munique 2026",
     html,
   });
 }

@@ -10,7 +10,7 @@ export function SchoolHeadStep({ draft, onChange }: SchoolHeadStepProps) {
     <div className="registration-field-group">
       <div>
         <label htmlFor="school" className="registration-label">
-          School / institution
+          Delegation / group name
         </label>
         <input
           id="school"

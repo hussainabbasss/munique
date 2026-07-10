@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { PageLinkPicker } from "@/components/admin/page-link-picker";
 import { saveBannerAction } from "@/lib/admin/actions/overview";
 import type { StatusBannerSettings } from "@/lib/types/admin";
 
@@ -55,10 +56,10 @@ export function BannerEditor({ initial }: Props) {
       </div>
       <div className="admin-field">
         <label htmlFor="banner_href">Link</label>
-        <input
+        <PageLinkPicker
           id="banner_href"
           name="href"
-          defaultValue={initial.href}
+          value={initial.href}
           required
         />
       </div>

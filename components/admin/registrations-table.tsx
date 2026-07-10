@@ -76,10 +76,22 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
     null,
   );
 
-  const headName = (r: RegistrationRow) =>
-    r.delegates?.find((d) => d.is_head_delegate)?.full_name ??
-    r.delegates?.[0]?.full_name ??
-    "—";
+  const headName = (r: RegistrationRow) => {
+    if (r.type === "delegation") {
+      const count = r.delegates?.length ?? 0;
+      const head =
+        r.delegates?.find((d) => d.is_head_delegate)?.full_name ??
+        r.delegates?.[0]?.full_name ??
+        "—";
+      return `${r.school || head} (${count})`;
+    }
+
+    return (
+      r.delegates?.find((d) => d.is_head_delegate)?.full_name ??
+      r.delegates?.[0]?.full_name ??
+      "—"
+    );
+  };
 
   return (
     <>
@@ -147,7 +159,7 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
               <p>
                 <strong>{headName(selected)}</strong> · {selected.head_email}
               </p>
-              <p>School: {selected.school || "—"}</p>
+              <p>Delegation: {selected.school || "—"}</p>
               <p>Fee: {formatPkr(selected.fee_amount)}</p>
               <p>MUN experience: {selected.mun_experience || "—"}</p>
               {selected.delegates?.length > 1 && (

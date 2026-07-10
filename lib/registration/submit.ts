@@ -215,12 +215,6 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
     const emailResult = await sendRegistrationReceived({
       to: headEmail,
       registrationId,
-      payment: {
-        feeAmount: fees.totalFee,
-        bankAccountTitle: pricing.bank_account_title,
-        bankDetails: pricing.bank_details,
-        paymentInstructions: pricing.payment_instructions,
-      },
     });
 
     if (emailResult.ok) {
@@ -322,12 +316,6 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
   const emailResult = await sendRegistrationReceived({
     to: headEmail,
     registrationId,
-    payment: {
-      feeAmount: fees.totalFee,
-      bankAccountTitle: pricing.bank_account_title,
-      bankDetails: pricing.bank_details,
-      paymentInstructions: pricing.payment_instructions,
-    },
   });
 
   if (emailResult.ok) {

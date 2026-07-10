@@ -16,10 +16,10 @@ export default async function DelegationRegisterPage() {
 
   return (
     <>
-      <h1 className="sr-only">School Delegation Registration</h1>
+      <h1 className="sr-only">Delegation Registration</h1>
       <RegistrationWizard
         portal="delegation"
-        portalLabel="School Delegation"
+        portalLabel="Delegation"
         committees={committees}
         pricing={pricing}
       />

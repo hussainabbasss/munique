@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AllotmentsManager } from "@/components/admin/allotments-manager";
 import { getAdminUser } from "@/lib/admin/helpers";
+import { countPendingAllotmentEmails } from "@/lib/allotments/pending-email";
 
 export default async function AllotmentsPage() {
   const admin = await getAdminUser();
@@ -10,7 +11,7 @@ export default async function AllotmentsPage() {
     supabase
       .from("allotments")
       .select(
-        "*, registrations(registration_id, payment_status, delegates(full_name, is_head_delegate)), committees(name)",
+        "*, registrations(registration_id, payment_status, type, school, delegates(full_name, is_head_delegate, email, allotment_email_sent_at)), committees(name)",
       )
       .order("created_at", { ascending: false }),
     supabase
@@ -20,11 +21,23 @@ export default async function AllotmentsPage() {
       .order("display_order"),
   ]);
 
-  const pendingCount =
-    allotments?.filter((a) => {
-      const reg = a.registrations as { payment_status: string } | null;
-      return a.status === "pending" && reg?.payment_status === "confirmed" && a.country;
-    }).length ?? 0;
+  const pendingEmailCount =
+    allotments?.reduce((count, allotment) => {
+      const reg = allotment.registrations as {
+        payment_status: string;
+        type: "delegate" | "delegation";
+        delegates: {
+          email: string | null;
+          is_head_delegate: boolean;
+          allotment_email_sent_at: string | null;
+        }[];
+      } | null;
+
+      return (
+        count +
+        countPendingAllotmentEmails(reg, Boolean(allotment.country))
+      );
+    }, 0) ?? 0;
 
   return (
     <section className="admin-panel">
@@ -32,7 +45,7 @@ export default async function AllotmentsPage() {
       <AllotmentsManager
         allotments={allotments ?? []}
         committees={committees ?? []}
-        pendingCount={pendingCount}
+        pendingEmailCount={pendingEmailCount}
         canIssue={admin?.role === "admin"}
       />
     </section>

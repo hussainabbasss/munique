@@ -1204,6 +1204,72 @@ a.admin-stat-card:hover {
   color: var(--admin-text-muted);
 }
 
+.admin-page-picker {
+  position: relative;
+}
+
+.admin-page-picker-path {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.admin-page-picker-list {
+  position: absolute;
+  z-index: var(--z-dropdown, 50);
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  max-height: 16rem;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  overflow-y: auto;
+  background: var(--admin-surface-raised);
+  border: 1px solid var(--admin-border-strong);
+  box-shadow: 0 12px 32px color-mix(in oklab, var(--ink) 14%, transparent);
+}
+
+.admin-page-picker-option {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  text-align: left;
+  color: var(--admin-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background var(--admin-transition);
+}
+
+.admin-page-picker-option:hover,
+.admin-page-picker-option-active {
+  background: var(--admin-row-hover);
+}
+
+.admin-page-picker-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-page-picker-href {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--admin-text-muted);
+}
+
+.admin-page-picker-empty {
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--admin-text-muted);
+}
+
 .admin-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1393,6 +1459,49 @@ a.admin-stat-card:hover {
 .admin-filters select:focus,
 .admin-filters input:focus {
   outline: none;
+  border-color: var(--admin-accent);
+}
+
+.admin-allotment-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--admin-hairline);
+}
+
+.admin-allotment-tabs-lede {
+  margin-bottom: 0.75rem;
+}
+
+.admin-allotment-tabs-secondary {
+  margin-top: -0.5rem;
+}
+
+.admin-allotment-tab {
+  min-height: 2.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--admin-text-muted);
+  background: var(--admin-input-bg);
+  border: 1px solid var(--admin-border-strong);
+  border-radius: 0;
+  cursor: pointer;
+  transition:
+    color var(--admin-transition),
+    background var(--admin-transition),
+    border-color var(--admin-transition);
+}
+
+.admin-allotment-tab:hover {
+  color: var(--admin-text);
+  border-color: var(--admin-accent);
+}
+
+.admin-allotment-tab-active {
+  color: var(--admin-text);
+  background: color-mix(in oklab, var(--admin-accent) 10%, var(--admin-input-bg));
   border-color: var(--admin-accent);
 }
 

@@ -10,6 +10,7 @@
     "bootstrap-admin": "node scripts/bootstrap-admin.mjs"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
     "next": "16.2.10",
