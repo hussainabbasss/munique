@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { SealLine } from "@/components/seal-line";
+import { RegisterCta } from "@/components/registration/register-cta";
+import { getRegistrationStatus } from "@/lib/admin/helpers";
 
 /* ── General-assembly seating chart ──
    Concentric arc rows of seat marks radiating from bottom center.
@@ -39,7 +41,9 @@ function buildSeatMarks(): SeatMark[] {
 
 const seatMarks = buildSeatMarks();
 
-export function Hero() {
+export async function Hero() {
+  const registration = await getRegistrationStatus();
+
   return (
     <section className="home-hero" aria-labelledby="hero-title">
       <div className="home-hero-backdrop" aria-hidden>
@@ -100,9 +104,13 @@ export function Hero() {
           </p>
 
           <div className="home-hero-actions home-rise home-rise-d3">
-            <Link href="/register" className="btn btn-signal">
+            <RegisterCta
+              enabled={registration.enabled}
+              message={registration.message}
+              className="btn btn-signal"
+            >
               Register
-            </Link>
+            </RegisterCta>
             <Link href="/committees" className="arrow-cta home-hero-cta-alt">
               View committees{" "}
               <span className="arrow" aria-hidden>

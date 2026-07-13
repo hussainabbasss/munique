@@ -2,12 +2,16 @@ import Link from "next/link";
 import { RegisterChooser } from "@/components/registration/register-chooser";
 import { RegistrationClosed } from "@/components/registration/registration-closed";
 import { fetchActivePricing } from "@/lib/registration/queries";
+import { getRegistrationStatus } from "@/lib/admin/helpers";
 import "./register.css";
 
 export default async function RegisterPage() {
-  const pricing = await fetchActivePricing();
+  const [pricing, registration] = await Promise.all([
+    fetchActivePricing(),
+    getRegistrationStatus(),
+  ]);
 
-  if (!pricing) {
+  if (!registration.enabled || !pricing) {
     return <RegistrationClosed />;
   }
 

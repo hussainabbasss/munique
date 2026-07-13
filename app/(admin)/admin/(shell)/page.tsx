@@ -2,17 +2,26 @@ import Link from "next/link";
 import { BannerEditor } from "@/components/admin/banner-editor";
 import { ExportCsvButton } from "@/components/admin/export-csv-button";
 import { RegistrationsChart } from "@/components/admin/registrations-chart";
+import { RegistrationStatusToggle } from "@/components/admin/registration-status-toggle";
+import { ScheduleStatusToggle } from "@/components/admin/schedule-status-toggle";
 import {
   fetchOverviewStats,
   fetchRegistrationChartData,
 } from "@/lib/admin/queries";
-import { formatPkr, getStatusBannerSettings } from "@/lib/admin/helpers";
+import {
+  formatPkr,
+  getRegistrationStatus,
+  getScheduleStatus,
+  getStatusBannerSettings,
+} from "@/lib/admin/helpers";
 
 export default async function AdminOverviewPage() {
-  const [stats, chartData, banner] = await Promise.all([
+  const [stats, chartData, banner, registration, schedule] = await Promise.all([
     fetchOverviewStats(),
     fetchRegistrationChartData(),
     getStatusBannerSettings(),
+    getRegistrationStatus(),
+    getScheduleStatus(),
   ]);
 
   return (
@@ -107,6 +116,16 @@ export default async function AdminOverviewPage() {
         <section className="admin-panel">
           <h2 className="admin-panel-title">Public status banner</h2>
           <BannerEditor initial={banner} />
+        </section>
+
+        <section className="admin-panel">
+          <h2 className="admin-panel-title">Registration status</h2>
+          <RegistrationStatusToggle initial={registration} />
+        </section>
+
+        <section className="admin-panel">
+          <h2 className="admin-panel-title">Schedule status</h2>
+          <ScheduleStatusToggle initial={schedule} />
         </section>
       </div>
     </>

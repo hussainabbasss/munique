@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
-import type { AdminUser, StatusBannerSettings } from "@/lib/types/admin";
+import type {
+  AdminUser,
+  RegistrationStatusSettings,
+  ScheduleStatusSettings,
+  StatusBannerSettings,
+} from "@/lib/types/admin";
 
 export { formatDate, formatPkr } from "@/lib/utils/format";
 
@@ -8,6 +13,18 @@ const DEFAULT_BANNER: StatusBannerSettings = {
   message: "REGISTRATION IS LIVE · REGISTER NOW →",
   href: "/register",
   visible: true,
+};
+
+export const DEFAULT_REGISTRATION_MESSAGE =
+  "Registrations aren’t live right now.";
+
+const DEFAULT_REGISTRATION_STATUS: RegistrationStatusSettings = {
+  enabled: true,
+  message: DEFAULT_REGISTRATION_MESSAGE,
+};
+
+const DEFAULT_SCHEDULE_STATUS: ScheduleStatusSettings = {
+  enabled: false,
 };
 
 export function isSupabaseConfigured() {
@@ -38,6 +55,25 @@ export async function getSiteSetting<T>(key: string, fallback: T): Promise<T> {
 
 export async function getStatusBannerSettings(): Promise<StatusBannerSettings> {
   return getSiteSetting("status_banner", DEFAULT_BANNER);
+}
+
+export async function getRegistrationStatus(): Promise<RegistrationStatusSettings> {
+  const status = await getSiteSetting(
+    "registration_status",
+    DEFAULT_REGISTRATION_STATUS,
+  );
+  return {
+    enabled: status.enabled !== false,
+    message: status.message?.trim() || DEFAULT_REGISTRATION_MESSAGE,
+  };
+}
+
+export async function getScheduleStatus(): Promise<ScheduleStatusSettings> {
+  const status = await getSiteSetting(
+    "schedule_status",
+    DEFAULT_SCHEDULE_STATUS,
+  );
+  return { enabled: status.enabled !== false };
 }
 
 export async function getAdminUser(): Promise<AdminUser | null> {

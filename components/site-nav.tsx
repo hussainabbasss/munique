@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { RegisterCta } from "@/components/registration/register-cta";
+import type { RegistrationStatusSettings } from "@/lib/types/admin";
 
 const navLinks = [
   { href: "/about", label: "About" },
@@ -24,7 +26,13 @@ const menuLinks = [
   { href: "/contact", label: "Contact" },
 ] as const;
 
-export function SiteNav() {
+export function SiteNav({
+  registration,
+  scheduleEnabled,
+}: {
+  registration: RegistrationStatusSettings;
+  scheduleEnabled: boolean;
+}) {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -93,25 +101,37 @@ export function SiteNav() {
         </Link>
 
         <div className="site-nav-links">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="site-nav-link"
-              aria-current={pathname === link.href ? "page" : undefined}
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Link href="/register" className="btn btn-signal site-nav-cta">
+          {navLinks.map((link) => {
+            const muted = link.href === "/schedule" && !scheduleEnabled;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`site-nav-link${muted ? " site-nav-link-muted" : ""}`}
+                aria-current={pathname === link.href ? "page" : undefined}
+                title={muted ? "Coming soon" : undefined}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+          <RegisterCta
+            enabled={registration.enabled}
+            message={registration.message}
+            className="btn btn-signal site-nav-cta"
+          >
             Register
-          </Link>
+          </RegisterCta>
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
-          <Link href="/register" className="btn btn-signal site-nav-cta">
+          <RegisterCta
+            enabled={registration.enabled}
+            message={registration.message}
+            className="btn btn-signal site-nav-cta"
+          >
             Register
-          </Link>
+          </RegisterCta>
           <button
             type="button"
             className="site-nav-menu-btn"
@@ -153,35 +173,39 @@ export function SiteNav() {
         </div>
 
         <ul className="menu-list">
-          {menuLinks.map((link, index) => (
-            <li
-              key={link.href}
-              className="menu-item"
-              style={{ "--menu-i": index } as CSSProperties}
-            >
-              <Link
-                href={link.href}
-                className="menu-link"
-                aria-current={pathname === link.href ? "page" : undefined}
-                onClick={() => setMenuOpen(false)}
+          {menuLinks.map((link, index) => {
+            const muted = link.href === "/schedule" && !scheduleEnabled;
+            return (
+              <li
+                key={link.href}
+                className="menu-item"
+                style={{ "--menu-i": index } as CSSProperties}
               >
-                {link.label}
-                <span className="menu-index" aria-hidden>
-                  {link.href === "/" ? "•" : ""}
-                </span>
-              </Link>
-            </li>
-          ))}
+                <Link
+                  href={link.href}
+                  className={`menu-link${muted ? " menu-link-muted" : ""}`}
+                  aria-current={pathname === link.href ? "page" : undefined}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {link.label}
+                  <span className="menu-index" aria-hidden>
+                    {muted ? "Soon" : link.href === "/" ? "•" : ""}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         <div className="menu-foot">
-          <Link
-            href="/register"
+          <RegisterCta
+            enabled={registration.enabled}
+            message={registration.message}
             className="btn btn-signal"
-            onClick={() => setMenuOpen(false)}
+            onNavigate={() => setMenuOpen(false)}
           >
             Register for Edition I
-          </Link>
+          </RegisterCta>
           <a
             href="https://instagram.com/munique_2026"
             target="_blank"

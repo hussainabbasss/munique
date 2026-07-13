@@ -15,6 +15,15 @@ export type StatusBannerSettings = {
   visible: boolean;
 };
 
+export type RegistrationStatusSettings = {
+  enabled: boolean;
+  message: string;
+};
+
+export type ScheduleStatusSettings = {
+  enabled: boolean;
+};
+
 export type PricingConfig = {
   id: string;
   is_active: boolean;

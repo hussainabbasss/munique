@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Reveal } from "@/components/reveal";
 import { SealLine } from "@/components/seal-line";
+import { getScheduleStatus } from "@/lib/admin/helpers";
 import "../program.css";
 
 const DAYS = [
@@ -54,7 +55,45 @@ function HallArcs() {
   );
 }
 
-export default function SchedulePage() {
+function ScheduleComingSoon() {
+  return (
+    <main id="main">
+      <header className="hall">
+        <HallArcs />
+        <div className="hall-inner">
+          <div className="hall-meta">
+            <span>Munique ’26 · Edition I</span>
+            <span>Programme</span>
+            <span>Coming soon</span>
+          </div>
+          <h1 className="hall-title">Coming soon</h1>
+          <p className="hall-lede">
+            The order of proceedings is still being finalised by the Executive
+            Board. It publishes here once venue and dates lock — check back
+            shortly.
+          </p>
+        </div>
+      </header>
+
+      <div className="sheet prog-foot">
+        <Link href="/" className="arrow-cta prog-back">
+          <span className="arrow" aria-hidden>
+            ←
+          </span>
+          Back to the floor
+        </Link>
+      </div>
+    </main>
+  );
+}
+
+export default async function SchedulePage() {
+  const schedule = await getScheduleStatus();
+
+  if (!schedule.enabled) {
+    return <ScheduleComingSoon />;
+  }
+
   return (
     <main id="main">
       <header className="hall">

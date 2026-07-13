@@ -1,4 +1,8 @@
-import { getStatusBannerSettings } from "@/lib/admin/helpers";
+import {
+  getRegistrationStatus,
+  getScheduleStatus,
+  getStatusBannerSettings,
+} from "@/lib/admin/helpers";
 import { StatusBanner } from "@/components/status-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
@@ -8,7 +12,11 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const banner = await getStatusBannerSettings();
+  const [banner, registration, schedule] = await Promise.all([
+    getStatusBannerSettings(),
+    getRegistrationStatus(),
+    getScheduleStatus(),
+  ]);
 
   return (
     <>
@@ -17,7 +25,10 @@ export default async function PublicLayout({
         href={banner.href}
         visible={banner.visible}
       />
-      <SiteNav />
+      <SiteNav
+        registration={registration}
+        scheduleEnabled={schedule.enabled}
+      />
       {children}
       <SiteFooter />
     </>
