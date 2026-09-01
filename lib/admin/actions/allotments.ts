@@ -61,7 +61,7 @@ export async function runMeritEngineAction() {
       .eq("payment_status", "confirmed"),
     supabase
       .from("committees")
-      .select("id, name, agenda, difficulty_tier")
+      .select("id, name, agenda, difficulty_tier, country_pool")
       .eq("is_published", true)
       .order("display_order"),
   ]);
@@ -115,7 +115,10 @@ export async function runMeritEngineAction() {
 
     const suggestion = await suggestAllotment({
       registration,
-      committees: publishedCommittees,
+      committees: (publishedCommittees ?? []).map((committee) => ({
+        ...committee,
+        country_pool: committee.country_pool ?? [],
+      })),
       takenCountries,
     });
 
@@ -125,6 +128,7 @@ export async function runMeritEngineAction() {
         merit_score: suggestion.merit_score,
         country: suggestion.country,
         committee_id: suggestion.committee_id,
+        ai_reasoning: suggestion.reasoning ?? null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "registration_id" },

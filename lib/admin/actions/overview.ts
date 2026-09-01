@@ -104,12 +104,12 @@ export async function exportRegistrationsCsvAction() {
   const { data: registrations } = await supabase
     .from("registrations")
     .select(
-      "registration_id, type, head_email, payment_status, fee_amount, created_at, school, delegates(full_name, is_head_delegate)",
+      "registration_id, type, head_email, payment_status, fee_amount, created_at, school, brand_ambassador_name, delegates(full_name, is_head_delegate)",
     )
     .order("created_at", { ascending: false });
 
   const header =
-    "registration_id,type,name,email,committee_pref,payment_status,fee_amount,created_at";
+    "registration_id,type,name,email,brand_ambassador,committee_pref,payment_status,fee_amount,created_at";
   const rows = (registrations ?? []).map((r) => {
     const delegates = r.delegates as
       | { full_name: string; is_head_delegate: boolean }[]
@@ -123,6 +123,7 @@ export async function exportRegistrationsCsvAction() {
       r.type,
       `"${head.replace(/"/g, '""')}"`,
       r.head_email,
+      `"${(r.brand_ambassador_name ?? "").replace(/"/g, '""')}"`,
       "",
       r.payment_status,
       r.fee_amount,

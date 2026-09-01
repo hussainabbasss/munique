@@ -4,12 +4,61 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { requireAdminUser } from "@/lib/admin/helpers";
+import {
+  isP5Country,
+} from "@/lib/allotments/countries";
 
 function slugify(name: string) {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function parseCountryPool(raw: string) {
+  let entries: string[] = [];
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return { pool: [] as string[] };
+  }
+
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (!Array.isArray(parsed)) {
+        return { error: "Invalid allotment pool format." };
+      }
+      entries = parsed.map((entry) => String(entry ?? ""));
+    } catch {
+      return { error: "Invalid allotment pool format." };
+    }
+  } else {
+    entries = trimmed.split(",");
+  }
+
+  const pool: string[] = [];
+  for (const entry of entries) {
+    const normalized = entry.trim().replace(/\s+/g, " ");
+    if (!normalized) continue;
+
+    if (normalized.length > 80) {
+      return { error: "Each allotment must be 80 characters or fewer." };
+    }
+
+    if (isP5Country(normalized)) {
+      return {
+        error: "P5 countries cannot be added to the allotment pool.",
+      };
+    }
+
+    const key = normalized.toLowerCase();
+    if (!pool.some((item) => item.toLowerCase() === key)) {
+      pool.push(normalized);
+    }
+  }
+
+  return { pool };
 }
 
 export async function saveCommitteeAction(formData: FormData) {
@@ -24,8 +73,18 @@ export async function saveCommitteeAction(formData: FormData) {
   const displayOrder = parseInt(String(formData.get("display_order") ?? "0"), 10);
   const isPublished = formData.get("is_published") === "on";
   const studyGuideEnabled = formData.get("study_guide_enabled") === "on";
+  const countryPoolRaw = String(formData.get("country_pool") ?? "");
 
   if (!name) return { error: "Name is required." };
+
+  const parsedPool = parseCountryPool(countryPoolRaw);
+  if ("error" in parsedPool) return { error: parsedPool.error };
+
+  if (isPublished && parsedPool.pool.length === 0) {
+    return {
+      error: "Published committees need at least one allotment in the pool.",
+    };
+  }
 
   const payload = {
     name,
@@ -36,6 +95,7 @@ export async function saveCommitteeAction(formData: FormData) {
     display_order: displayOrder,
     is_published: isPublished,
     study_guide_enabled: studyGuideEnabled,
+    country_pool: parsedPool.pool,
     updated_at: new Date().toISOString(),
   };
 

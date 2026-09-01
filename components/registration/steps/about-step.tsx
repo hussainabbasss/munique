@@ -48,6 +48,21 @@ export function AboutStep({ draft, onChange }: AboutStepProps) {
           required
         />
       </div>
+      <div className="registration-field-optional">
+        <label htmlFor="brand_ambassador_name" className="registration-label">
+          Brand Ambassador
+        </label>
+        <input
+          id="brand_ambassador_name"
+          className="registration-field"
+          value={draft.brandAmbassadorName}
+          onChange={(event) =>
+            onChange({ brandAmbassadorName: event.target.value })
+          }
+          autoComplete="off"
+        />
+        <p className="registration-field-hint">Optional — enter name if applicable</p>
+      </div>
     </div>
   );
 }

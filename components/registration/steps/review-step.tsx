@@ -80,6 +80,14 @@ export function ReviewStep({
                   {delegationDraft.headEmail}
                 </span>
               </div>
+              {delegationDraft.brandAmbassadorName && (
+                <div className="registration-review-row">
+                  <span className="registration-review-key">Brand Ambassador</span>
+                  <span className="registration-review-value">
+                    {delegationDraft.brandAmbassadorName}
+                  </span>
+                </div>
+              )}
             </div>
           </section>
 
@@ -142,6 +150,14 @@ export function ReviewStep({
                 {delegateDraft.school}
               </span>
             </div>
+            {delegateDraft.brandAmbassadorName && (
+              <div className="registration-review-row">
+                <span className="registration-review-key">Brand Ambassador</span>
+                <span className="registration-review-value">
+                  {delegateDraft.brandAmbassadorName}
+                </span>
+              </div>
+            )}
           </div>
         </section>
       )}

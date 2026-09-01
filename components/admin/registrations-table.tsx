@@ -22,6 +22,7 @@ type RegistrationRow = {
   fee_amount: number;
   school: string;
   head_email: string;
+  brand_ambassador_name: string | null;
   mun_experience: string;
   created_at: string;
   payment_proof_path: string | null;
@@ -162,6 +163,9 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
               <p>Delegation: {selected.school || "—"}</p>
               <p>Fee: {formatPkr(selected.fee_amount)}</p>
               <p>MUN experience: {selected.mun_experience || "—"}</p>
+              {selected.brand_ambassador_name && (
+                <p>Brand Ambassador: {selected.brand_ambassador_name}</p>
+              )}
               {selected.delegates?.length > 1 && (
                 <div>
                   <p>

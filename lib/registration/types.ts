@@ -15,6 +15,7 @@ export type DelegateDraft = {
   fullName: string;
   email: string;
   school: string;
+  brandAmbassadorName: string;
   committeePref1: string;
   committeePref2: string;
   committeePref3: string;
@@ -25,6 +26,7 @@ export type DelegationDraft = {
   school: string;
   headName: string;
   headEmail: string;
+  brandAmbassadorName: string;
   members: DelegateMember[];
   committeePref1: string;
   committeePref2: string;
@@ -74,6 +76,7 @@ export function emptyDelegateDraft(): DelegateDraft {
     fullName: "",
     email: "",
     school: "",
+    brandAmbassadorName: "",
     committeePref1: "",
     committeePref2: "",
     committeePref3: "",
@@ -86,6 +89,7 @@ export function emptyDelegationDraft(): DelegationDraft {
     school: "",
     headName: "",
     headEmail: "",
+    brandAmbassadorName: "",
     members: [{ fullName: "", email: "" }],
     committeePref1: "",
     committeePref2: "",

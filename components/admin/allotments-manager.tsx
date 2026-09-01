@@ -26,6 +26,7 @@ type AllotmentRow = {
   country: string | null;
   committee_id: string | null;
   status: string;
+  ai_reasoning: string | null;
   registrations: {
     registration_id: string;
     payment_status: string;
@@ -36,7 +37,19 @@ type AllotmentRow = {
   committees: { name: string } | null;
 };
 
-type Committee = { id: string; name: string };
+type Committee = {
+  id: string;
+  name: string;
+  country_pool: string[];
+};
+
+type AwaitingRow = {
+  id: string;
+  registration_id: string;
+  type: "delegate" | "delegation";
+  school: string;
+  delegates: DelegateRow[];
+};
 
 type StatusTab = "pending" | "issued";
 type TypeTab = "delegate" | "delegation";
@@ -44,23 +57,40 @@ type TypeTab = "delegate" | "delegation";
 type Props = {
   allotments: AllotmentRow[];
   committees: Committee[];
+  awaiting: AwaitingRow[];
   pendingEmailCount: number;
+  incompletePendingCount: number;
+  pendingDelegateEmails: number;
+  pendingDelegationEmails: number;
   canIssue: boolean;
 };
 
-function matchesType(row: AllotmentRow, typeTab: TypeTab) {
+function matchesType(
+  row: { registrations?: { type: TypeTab } | null },
+  typeTab: TypeTab,
+) {
   return row.registrations?.type === typeTab;
+}
+
+function matchesAwaitingType(row: AwaitingRow, typeTab: TypeTab) {
+  return row.type === typeTab;
 }
 
 export function AllotmentsManager({
   allotments,
   committees,
+  awaiting,
   pendingEmailCount,
+  incompletePendingCount,
+  pendingDelegateEmails,
+  pendingDelegationEmails,
   canIssue,
 }: Props) {
   const [typeTab, setTypeTab] = useState<TypeTab>("delegate");
   const [statusTab, setStatusTab] = useState<StatusTab>("pending");
   const [editing, setEditing] = useState<AllotmentRow | null>(null);
+  const [editCommitteeId, setEditCommitteeId] = useState("");
+  const [editCountry, setEditCountry] = useState("");
   const [showIssueModal, setShowIssueModal] = useState(false);
 
   const [engineState, engineAction, running] = useActionState(
@@ -84,22 +114,47 @@ export function AllotmentsManager({
     null,
   );
 
+  const committeeById = useMemo(
+    () => new Map(committees.map((committee) => [committee.id, committee])),
+    [committees],
+  );
+
   const byType = useMemo(
     () => allotments.filter((row) => matchesType(row, typeTab)),
     [allotments, typeTab],
   );
 
   const pendingRows = useMemo(
-    () => byType.filter((row) => !isAllotmentIssuedTab(row.registrations, row.status, Boolean(row.country))),
+    () =>
+      byType.filter(
+        (row) =>
+          !isAllotmentIssuedTab(
+            row.registrations,
+            row.status,
+            Boolean(row.country),
+          ),
+      ),
     [byType],
   );
 
   const issuedRows = useMemo(
-    () => byType.filter((row) => isAllotmentIssuedTab(row.registrations, row.status, Boolean(row.country))),
+    () =>
+      byType.filter((row) =>
+        isAllotmentIssuedTab(
+          row.registrations,
+          row.status,
+          Boolean(row.country),
+        ),
+      ),
     [byType],
   );
 
   const visibleRows = statusTab === "pending" ? pendingRows : issuedRows;
+
+  const awaitingByType = useMemo(
+    () => awaiting.filter((row) => matchesAwaitingType(row, typeTab)),
+    [awaiting, typeTab],
+  );
 
   const delegateCount = useMemo(
     () => allotments.filter((row) => row.registrations?.type === "delegate").length,
@@ -107,12 +162,22 @@ export function AllotmentsManager({
   );
 
   const delegationCount = useMemo(
-    () => allotments.filter((row) => row.registrations?.type === "delegation").length,
+    () =>
+      allotments.filter((row) => row.registrations?.type === "delegation").length,
     [allotments],
   );
 
-  const displayName = (row: AllotmentRow) => {
-    const reg = row.registrations;
+  const canIssueNow =
+    canIssue && pendingEmailCount > 0 && incompletePendingCount === 0;
+
+  const openEdit = (row: AllotmentRow) => {
+    setEditing(row);
+    setEditCommitteeId(row.committee_id ?? "");
+    setEditCountry(row.country ?? "");
+  };
+
+  const displayName = (row: AllotmentRow | AwaitingRow) => {
+    const reg = "registrations" in row ? row.registrations : row;
     if (!reg) return "—";
 
     if (reg.type === "delegation") {
@@ -131,23 +196,66 @@ export function AllotmentsManager({
     );
   };
 
+  const registrationId = (row: AllotmentRow | AwaitingRow) =>
+    "registrations" in row
+      ? (row.registrations?.registration_id ?? "—")
+      : row.registration_id;
+
+  const selectedCommitteePool =
+    committeeById.get(editCommitteeId)?.country_pool ?? [];
+
   return (
     <>
-      <div className="admin-actions" style={{ marginBottom: "1rem" }}>
-        <form action={engineAction}>
-          <button type="submit" className="btn-admin-secondary" disabled={running}>
-            {running ? "Running…" : "Run merit engine"}
-          </button>
-        </form>
-        {canIssue && pendingEmailCount > 0 && (
+      <div className="admin-allotment-toolbar">
+        <div className="admin-allotment-toolbar-actions">
+          <form action={engineAction}>
+            <button type="submit" className="btn-admin-secondary" disabled={running}>
+              {running ? "Running…" : "Run merit engine"}
+            </button>
+          </form>
+          {canIssue && (
+            <button
+              type="button"
+              className="btn-admin-primary btn-admin-weighty"
+              disabled={!canIssueNow}
+              title={
+                incompletePendingCount > 0
+                  ? "Complete all pending allotments before issuing"
+                  : pendingEmailCount === 0
+                    ? "No allotment emails pending"
+                    : undefined
+              }
+              onClick={() => setShowIssueModal(true)}
+            >
+              Issue allotments
+            </button>
+          )}
+        </div>
+
+        <div
+          className="admin-allotment-segmented"
+          role="tablist"
+          aria-label="Registration type"
+        >
           <button
             type="button"
-            className="btn-admin-primary btn-admin-weighty"
-            onClick={() => setShowIssueModal(true)}
+            role="tab"
+            aria-selected={typeTab === "delegate"}
+            className={`admin-allotment-segment${typeTab === "delegate" ? " admin-allotment-segment-active" : ""}`}
+            onClick={() => setTypeTab("delegate")}
           >
-            Issue allotments
+            Delegates ({delegateCount})
           </button>
-        )}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={typeTab === "delegation"}
+            className={`admin-allotment-segment${typeTab === "delegation" ? " admin-allotment-segment-active" : ""}`}
+            onClick={() => setTypeTab("delegation")}
+          >
+            Delegations ({delegationCount})
+          </button>
+        </div>
       </div>
 
       {engineState?.success && (
@@ -163,38 +271,34 @@ export function AllotmentsManager({
         <p className="admin-toast admin-toast-error">{issueState.error}</p>
       )}
 
-      <p className="admin-field-hint admin-allotment-tabs-lede">
-        Merit engine never auto-assigns P5 countries — use Edit override for manual P5
-        assignment. Delegations share one country; only the head delegate is emailed.
-      </p>
+      {awaitingByType.length > 0 && (
+        <section className="admin-allotment-awaiting">
+          <div className="admin-allotment-awaiting-head">
+            <h2 className="admin-allotment-awaiting-title">
+              Awaiting merit engine ({awaitingByType.length})
+            </h2>
+            <p className="admin-field-hint">
+              Confirmed {typeTab === "delegation" ? "delegations" : "delegates"}{" "}
+              without allotment suggestions yet.
+            </p>
+          </div>
+          <ul className="admin-allotment-awaiting-list">
+            {awaitingByType.slice(0, 8).map((row) => (
+              <li key={row.id} className="mono">
+                {row.registration_id} · {displayName(row)}
+              </li>
+            ))}
+            {awaitingByType.length > 8 && (
+              <li className="admin-field-hint">
+                +{awaitingByType.length - 8} more
+              </li>
+            )}
+          </ul>
+        </section>
+      )}
 
       <div
-        className="admin-allotment-tabs"
-        role="tablist"
-        aria-label="Registration type"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={typeTab === "delegate"}
-          className={`admin-allotment-tab${typeTab === "delegate" ? " admin-allotment-tab-active" : ""}`}
-          onClick={() => setTypeTab("delegate")}
-        >
-          Individual delegates ({delegateCount})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={typeTab === "delegation"}
-          className={`admin-allotment-tab${typeTab === "delegation" ? " admin-allotment-tab-active" : ""}`}
-          onClick={() => setTypeTab("delegation")}
-        >
-          Delegations ({delegationCount})
-        </button>
-      </div>
-
-      <div
-        className="admin-allotment-tabs admin-allotment-tabs-secondary"
+        className="admin-allotment-segmented admin-allotment-segmented-secondary"
         role="tablist"
         aria-label="Allotment status"
       >
@@ -202,7 +306,7 @@ export function AllotmentsManager({
           type="button"
           role="tab"
           aria-selected={statusTab === "pending"}
-          className={`admin-allotment-tab${statusTab === "pending" ? " admin-allotment-tab-active" : ""}`}
+          className={`admin-allotment-segment${statusTab === "pending" ? " admin-allotment-segment-active" : ""}`}
           onClick={() => setStatusTab("pending")}
         >
           Pending ({pendingRows.length})
@@ -211,7 +315,7 @@ export function AllotmentsManager({
           type="button"
           role="tab"
           aria-selected={statusTab === "issued"}
-          className={`admin-allotment-tab${statusTab === "issued" ? " admin-allotment-tab-active" : ""}`}
+          className={`admin-allotment-segment${statusTab === "issued" ? " admin-allotment-segment-active" : ""}`}
           onClick={() => setStatusTab("issued")}
         >
           Issued ({issuedRows.length})
@@ -219,13 +323,14 @@ export function AllotmentsManager({
       </div>
 
       <div className="admin-table-wrap">
-        <table className="admin-table">
+        <table className="admin-table admin-allotment-table">
           <thead>
             <tr>
               <th>ID</th>
               <th>{typeTab === "delegation" ? "Delegation" : "Name"}</th>
               <th>Merit</th>
-              <th>Suggested</th>
+              <th>Committee</th>
+              <th>Country</th>
               <th>Status</th>
               <th>Email</th>
               {statusTab === "pending" && <th>Actions</th>}
@@ -235,7 +340,7 @@ export function AllotmentsManager({
             {visibleRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={statusTab === "pending" ? 7 : 6}
+                  colSpan={statusTab === "pending" ? 8 : 7}
                   className="admin-empty"
                 >
                   {statusTab === "pending"
@@ -246,11 +351,16 @@ export function AllotmentsManager({
             ) : (
               visibleRows.map((a) => (
                 <tr key={a.id}>
-                  <td className="mono">{a.registrations?.registration_id}</td>
-                  <td>{displayName(a)}</td>
+                  <td className="mono">{registrationId(a)}</td>
+                  <td className="admin-allotment-name" title={displayName(a)}>
+                    {displayName(a)}
+                  </td>
                   <td className="mono">{a.merit_score ?? "—"}</td>
-                  <td>
-                    {a.country ?? "—"} · {a.committees?.name ?? "—"}
+                  <td className="admin-allotment-cell-truncate" title={a.committees?.name ?? ""}>
+                    {a.committees?.name ?? "—"}
+                  </td>
+                  <td className="admin-allotment-cell-truncate" title={a.country ?? ""}>
+                    {a.country ?? "—"}
                   </td>
                   <td style={{ textTransform: "capitalize" }}>{a.status}</td>
                   <td>
@@ -261,9 +371,9 @@ export function AllotmentsManager({
                       <button
                         type="button"
                         className="btn-admin-secondary"
-                        onClick={() => setEditing(a)}
+                        onClick={() => openEdit(a)}
                       >
-                        Edit
+                        Adjust
                       </button>
                     </td>
                   )}
@@ -277,30 +387,61 @@ export function AllotmentsManager({
       {editing && (
         <>
           <div className="admin-modal-backdrop" onClick={() => setEditing(null)} />
-          <div className="admin-modal" role="dialog">
-            <h2 className="admin-modal-title">Edit allotment override</h2>
-            <p className="admin-field-hint">
-              P5 countries are listed separately for manual EB assignment only.
-            </p>
+          <div className="admin-modal admin-allotment-modal" role="dialog">
+            <div className="admin-allotment-modal-head">
+              <h2 className="admin-modal-title">Review allotment</h2>
+              <button
+                type="button"
+                className="btn-admin-secondary"
+                onClick={() => setEditing(null)}
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="admin-allotment-review-card">
+              <p className="mono admin-allotment-review-id">
+                {editing.registrations?.registration_id}
+              </p>
+              <p className="admin-allotment-review-name">{displayName(editing)}</p>
+              <dl className="admin-allotment-review-meta">
+                <div>
+                  <dt>Merit score</dt>
+                  <dd>{editing.merit_score ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Suggested committee</dt>
+                  <dd>{editing.committees?.name ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Suggested country</dt>
+                  <dd>{editing.country ?? "—"}</dd>
+                </div>
+              </dl>
+              {editing.ai_reasoning && (
+                <p className="admin-field-hint">{editing.ai_reasoning}</p>
+              )}
+              <p className="admin-field-hint">
+                P5 countries are listed separately for manual EB assignment only.
+              </p>
+            </div>
+
             {overrideState?.error && (
               <p className="admin-toast admin-toast-error">{overrideState.error}</p>
             )}
             <form action={overrideAction} className="admin-form-grid">
               <input type="hidden" name="registration_id" value={editing.registration_id} />
               <div className="admin-field">
-                <label htmlFor="country">Country</label>
-                <CountryPicker
-                  id="country"
-                  defaultValue={editing.country ?? ""}
-                  required
-                />
-              </div>
-              <div className="admin-field">
                 <label htmlFor="committee_id">Committee</label>
                 <select
                   id="committee_id"
                   name="committee_id"
-                  defaultValue={editing.committee_id ?? ""}
+                  value={editCommitteeId}
+                  onChange={(event) => {
+                    setEditCommitteeId(event.target.value);
+                    setEditCountry("");
+                  }}
+                  required
                 >
                   <option value="">Select committee</option>
                   {committees.map((c) => (
@@ -311,11 +452,25 @@ export function AllotmentsManager({
                 </select>
               </div>
               <div className="admin-field">
-                <label htmlFor="override_note">Override note</label>
-                <textarea id="override_note" name="override_note" />
+                <label htmlFor="country">Country</label>
+                <CountryPicker
+                  id="country"
+                  value={editCountry}
+                  committeePool={selectedCommitteePool}
+                  onChange={setEditCountry}
+                  required
+                />
               </div>
-              <button type="submit" className="btn-admin-primary" disabled={saving}>
-                Save override
+              <div className="admin-field">
+                <label htmlFor="override_note">Override note</label>
+                <textarea id="override_note" name="override_note" rows={3} />
+              </div>
+              <button
+                type="submit"
+                className="btn-admin-primary"
+                disabled={saving || !editCommitteeId || !editCountry}
+              >
+                {saving ? "Saving…" : "Save allotment"}
               </button>
             </form>
           </div>
@@ -336,6 +491,10 @@ export function AllotmentsManager({
               Individual delegates are emailed directly; delegations are emailed to
               the head delegate only. Already-emailed recipients are skipped.
             </p>
+            <ul className="admin-allotment-issue-breakdown">
+              <li>{pendingDelegateEmails} individual delegate emails</li>
+              <li>{pendingDelegationEmails} delegation head emails</li>
+            </ul>
             <form action={issueAction} className="admin-actions">
               <button type="submit" className="btn-admin-primary" disabled={issuing}>
                 {issuing ? "Issuing…" : "Confirm issue"}

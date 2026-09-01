@@ -1,8 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
+  isCountryInPool,
   isP5Country,
   P5_COUNTRIES,
-  STANDARD_COUNTRIES,
+  resolveCommitteePool,
 } from "@/lib/allotments/countries";
 import type {
   MeritCommittee,
@@ -49,6 +50,12 @@ function heuristicMeritScore(reg: MeritRegistration, difficultyTier: string) {
     difficultyTier === "high" ? 12 : difficultyTier === "medium" ? 6 : 0;
 
   return clampScore(score + tierBonus);
+}
+
+function committeesWithPool(committees: MeritCommittee[]) {
+  return committees.filter(
+    (committee) => resolveCommitteePool(committee.country_pool).length > 0,
+  );
 }
 
 function pickCommitteeFromPrefs(
@@ -127,7 +134,13 @@ function heuristicCountry(
   takenCountries: Set<string>,
 ) {
   const agenda = committee?.agenda ?? "";
-  const ranked = [...STANDARD_COUNTRIES]
+  const pool = resolveCommitteePool(committee?.country_pool);
+  if (!pool.length) {
+    throw new Error(
+      `Committee ${committee?.name ?? "unknown"} has no allotment pool.`,
+    );
+  }
+  const ranked = [...pool]
     .map((country) => ({
       country,
       relevance: agendaKeywordScore(agenda, country),
@@ -140,21 +153,24 @@ function heuristicCountry(
     });
 
   const highMerit = meritScore >= 65;
-  const pool = highMerit ? ranked.slice(0, 15) : ranked.slice(5, 35);
+  const slice = highMerit ? ranked.slice(0, 15) : ranked.slice(5, 35);
+  const candidates = slice.length > 0 ? slice : ranked;
 
-  for (const entry of pool) {
+  for (const entry of candidates) {
     const key = entry.country.toLowerCase();
     if (!takenCountries.has(key)) {
       return entry.country;
     }
   }
 
-  for (const country of STANDARD_COUNTRIES) {
+  for (const country of pool) {
     const key = country.toLowerCase();
     if (!takenCountries.has(key)) return country;
   }
 
-  return STANDARD_COUNTRIES[0];
+  throw new Error(
+    `No available allotments left in pool for ${committee?.name ?? "committee"}.`,
+  );
 }
 
 function parseGeminiJson(text: string): MeritSuggestion | null {
@@ -184,6 +200,22 @@ function parseGeminiJson(text: string): MeritSuggestion | null {
   }
 }
 
+function validateSuggestion(
+  parsed: MeritSuggestion,
+  committees: MeritCommittee[],
+) {
+  const committee = committees.find((c) => c.id === parsed.committee_id);
+  if (!committee) return null;
+  if (isP5Country(parsed.country)) return null;
+
+  const pool = resolveCommitteePool(committee.country_pool);
+  if (!pool.length) return null;
+
+  if (!isCountryInPool(parsed.country, pool)) return null;
+
+  return parsed;
+}
+
 async function suggestWithGemini(
   reg: MeritRegistration,
   committees: MeritCommittee[],
@@ -199,11 +231,14 @@ async function suggestWithGemini(
   });
 
   const committeeBlock = committees
-    .map(
-      (c) =>
-        `- id: ${c.id}\n  name: ${c.name}\n  difficulty: ${c.difficulty_tier}\n  agenda: ${c.agenda.slice(0, 500)}`,
-    )
+    .filter((c) => resolveCommitteePool(c.country_pool).length > 0)
+    .map((c) => {
+      const pool = resolveCommitteePool(c.country_pool);
+      return `- id: ${c.id}\n  name: ${c.name}\n  difficulty: ${c.difficulty_tier}\n  agenda: ${c.agenda.slice(0, 500)}\n  allotment_pool: ${pool.join(", ")}`;
+    })
     .join("\n");
+
+  if (!committeeBlock) return null;
 
   const delegateBlock =
     reg.type === "delegation"
@@ -220,7 +255,7 @@ Score this registration and suggest ONE committee and ONE country assignment.
 
 RULES (strict):
 1. NEVER assign P5 countries (${P5_COUNTRIES.join(", ")}). Those are reserved for manual EB assignment only.
-2. Choose country ONLY from this standard pool: ${STANDARD_COUNTRIES.join(", ")}
+2. Choose country ONLY from the selected committee's allotment_pool (listed per committee below). Never use a country outside that committee's pool.
 3. More experienced delegates/delegations should receive countries MORE central/relevant to the committee agenda.
 4. Less experienced delegates should receive countries still plausible but less agenda-central.
 5. For delegations: score the ENTIRE group as one unit using combined experience. Assign ONE shared country for all delegates in the delegation.
@@ -244,7 +279,7 @@ Return JSON only:
 {
   "merit_score": <integer 0-100>,
   "committee_id": "<uuid from list>",
-  "country": "<from standard pool, never P5>",
+  "country": "<from that committee's allotment_pool, never P5>",
   "reasoning": "<one sentence>"
 }`;
 
@@ -254,18 +289,7 @@ Return JSON only:
     const parsed = parseGeminiJson(text);
     if (!parsed) return null;
 
-    const committeeExists = committees.some((c) => c.id === parsed.committee_id);
-    if (!committeeExists) return null;
-    if (isP5Country(parsed.country)) return null;
-    if (
-      !STANDARD_COUNTRIES.some(
-        (c) => c.toLowerCase() === parsed.country.toLowerCase(),
-      )
-    ) {
-      return null;
-    }
-
-    return parsed;
+    return validateSuggestion(parsed, committees);
   } catch (error) {
     console.error("[merit-engine] Gemini failed", error);
     return null;
@@ -279,13 +303,16 @@ export async function suggestAllotment(params: {
 }): Promise<MeritSuggestion> {
   const { registration, committees, takenCountries } = params;
 
-  if (!committees.length) {
-    throw new Error("No published committees available for allotment.");
+  const eligible = committeesWithPool(committees);
+  if (!eligible.length) {
+    throw new Error(
+      "No published committees with an allotment pool — add allotments on each committee first.",
+    );
   }
 
   const gemini = await suggestWithGemini(
     registration,
-    committees,
+    eligible,
     takenCountries,
   );
 
@@ -296,15 +323,15 @@ export async function suggestAllotment(params: {
 
   const prefCommitteeId = pickCommitteeFromPrefs(
     registration,
-    committees,
+    eligible,
     heuristicMeritScore(
       registration,
-      committees.find((c) => c.id === registration.committee_pref_1)
+      eligible.find((c) => c.id === registration.committee_pref_1)
         ?.difficulty_tier ?? "medium",
     ),
   );
   const committee =
-    committees.find((c) => c.id === prefCommitteeId) ?? committees[0];
+    eligible.find((c) => c.id === prefCommitteeId) ?? eligible[0];
   const meritScore = heuristicMeritScore(
     registration,
     committee.difficulty_tier,

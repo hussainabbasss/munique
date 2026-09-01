@@ -23,10 +23,14 @@ import type {
 } from "@/lib/registration/types";
 
 function parseDelegateDraft(formData: FormData): DelegateDraft {
+  const brandAmbassadorName = String(
+    formData.get("brand_ambassador_name") ?? "",
+  ).trim();
   return {
     fullName: String(formData.get("full_name") ?? "").trim(),
     email: String(formData.get("email") ?? "").trim().toLowerCase(),
     school: String(formData.get("school") ?? "").trim(),
+    brandAmbassadorName,
     committeePref1: String(formData.get("committee_pref_1") ?? ""),
     committeePref2: String(formData.get("committee_pref_2") ?? ""),
     committeePref3: String(formData.get("committee_pref_3") ?? ""),
@@ -54,6 +58,7 @@ function parseDelegationDraft(formData: FormData): DelegationDraft {
     school: String(formData.get("school") ?? "").trim(),
     headName: String(formData.get("head_name") ?? "").trim(),
     headEmail: String(formData.get("head_email") ?? "").trim().toLowerCase(),
+    brandAmbassadorName: String(formData.get("brand_ambassador_name") ?? "").trim(),
     members,
     committeePref1: String(formData.get("committee_pref_1") ?? ""),
     committeePref2: String(formData.get("committee_pref_2") ?? ""),
@@ -188,6 +193,7 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
         committee_pref_2: draft.committeePref2 || null,
         committee_pref_3: draft.committeePref3 || null,
         mun_experience: draft.munExperience,
+        brand_ambassador_name: draft.brandAmbassadorName || null,
         payment_proof_path: paymentProofPath,
       })
       .select("id")
@@ -289,6 +295,7 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
       committee_pref_2: draft.committeePref2 || null,
       committee_pref_3: draft.committeePref3 || null,
       mun_experience: draft.munExperience,
+      brand_ambassador_name: draft.brandAmbassadorName || null,
       payment_proof_path: paymentProofPath,
     })
     .select("id")

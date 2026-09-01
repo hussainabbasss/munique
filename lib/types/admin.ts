@@ -51,6 +51,7 @@ export type Committee = {
   logo_path: string | null;
   display_order: number;
   is_published: boolean;
+  country_pool: string[];
   created_at: string;
   updated_at: string;
 };
@@ -80,6 +81,7 @@ export type Registration = {
   fee_amount: number;
   school: string;
   head_email: string;
+  brand_ambassador_name: string | null;
   committee_pref_1: string | null;
   committee_pref_2: string | null;
   committee_pref_3: string | null;
@@ -111,6 +113,7 @@ export type Allotment = {
   status: "pending" | "issued";
   is_override: boolean;
   override_note: string | null;
+  ai_reasoning: string | null;
   issued_at: string | null;
   issued_by: string | null;
   allotment_email_sent_at: string | null;

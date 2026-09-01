@@ -26,30 +26,37 @@ export function CommitteePrefFields({
 }: CommitteePrefFieldsProps) {
   return (
     <div className="registration-field-group">
-      <CommitteePicker
-        id="committee_pref_1"
-        label="Committee preference 1"
-        committees={committees}
-        value={pref1}
-        onChange={onPref1Change}
-        required
-      />
+      <section className="registration-committee-prefs">
+        <p className="registration-committee-prefs-intro">
+          Rank up to three committee choices. Preference 1 is your top pick.
+        </p>
+        <div className="registration-committee-prefs-grid">
+          <CommitteePicker
+            id="committee_pref_1"
+            label="1st choice"
+            committees={committees}
+            value={pref1}
+            onChange={onPref1Change}
+            required
+          />
 
-      <CommitteePicker
-        id="committee_pref_2"
-        label="Committee preference 2"
-        committees={committees}
-        value={pref2}
-        onChange={onPref2Change}
-      />
+          <CommitteePicker
+            id="committee_pref_2"
+            label="2nd choice"
+            committees={committees}
+            value={pref2}
+            onChange={onPref2Change}
+          />
 
-      <CommitteePicker
-        id="committee_pref_3"
-        label="Committee preference 3"
-        committees={committees}
-        value={pref3}
-        onChange={onPref3Change}
-      />
+          <CommitteePicker
+            id="committee_pref_3"
+            label="3rd choice"
+            committees={committees}
+            value={pref3}
+            onChange={onPref3Change}
+          />
+        </div>
+      </section>
 
       <div>
         <label htmlFor="mun_experience" className="registration-label">
@@ -58,7 +65,7 @@ export function CommitteePrefFields({
         <textarea
           id="mun_experience"
           className="registration-field"
-          rows={5}
+          rows={4}
           value={munExperience}
           onChange={(event) => onMunExperienceChange(event.target.value)}
           placeholder="Describe your prior MUN experience, awards, and committee interests."

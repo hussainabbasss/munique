@@ -8,6 +8,7 @@ import {
   uploadCommitteeLogoAction,
   uploadStudyGuideAction,
 } from "@/lib/admin/actions/committees";
+import { CountryPoolEditor } from "@/components/admin/country-pool-editor";
 import type { Committee } from "@/lib/types/admin";
 
 type Props = {
@@ -107,6 +108,9 @@ export function CommitteeForm({ committee, onDone }: Props) {
           />
           <label htmlFor="study_guide_enabled">Enable study guide button</label>
         </div>
+        <CountryPoolEditor
+          defaultValue={committee?.country_pool ?? []}
+        />
         <div className="admin-actions">
           <button type="submit" className="btn-admin-primary" disabled={saving}>
             {saving ? "Saving…" : "Save committee"}

@@ -61,10 +61,6 @@ export const STANDARD_COUNTRIES = [
   "Jamaica",
 ] as const;
 
-export const ALL_COUNTRIES = [...P5_COUNTRIES, ...STANDARD_COUNTRIES] as const;
-
-export type CountryName = (typeof ALL_COUNTRIES)[number];
-
 export function isP5Country(country: string) {
   const normalized = country.trim().toLowerCase();
   const p5Names = new Set([
@@ -83,4 +79,19 @@ export function isP5Country(country: string) {
   ]);
 
   return p5Names.has(normalized);
+}
+
+export const ALL_COUNTRIES = [...P5_COUNTRIES, ...STANDARD_COUNTRIES] as const;
+
+export type CountryName = (typeof ALL_COUNTRIES)[number];
+
+/** Return the committee's allotment pool as configured — empty when none set. */
+export function resolveCommitteePool(pool: string[] | null | undefined) {
+  if (!pool?.length) return [];
+  return pool;
+}
+
+export function isCountryInPool(country: string, pool: readonly string[]) {
+  const normalized = country.trim().toLowerCase();
+  return pool.some((entry) => entry.toLowerCase() === normalized);
 }

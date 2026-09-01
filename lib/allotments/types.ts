@@ -3,6 +3,7 @@ export type MeritCommittee = {
   name: string;
   agenda: string;
   difficulty_tier: "low" | "medium" | "high";
+  country_pool: string[];
 };
 
 export type MeritDelegate = {

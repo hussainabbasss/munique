@@ -161,6 +161,7 @@ export function RegistrationWizard({
       formData.set("committee_pref_2", draft.committeePref2);
       formData.set("committee_pref_3", draft.committeePref3);
       formData.set("mun_experience", draft.munExperience);
+      formData.set("brand_ambassador_name", draft.brandAmbassadorName);
 
       if (paymentProofFile) {
         formData.append("payment_proof", paymentProofFile);
