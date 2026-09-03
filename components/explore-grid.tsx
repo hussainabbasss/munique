@@ -19,7 +19,7 @@ const rows = [
   {
     href: "/schedule",
     title: "Schedule",
-    description: "Programme and venue. Dates TBA.",
+    description: "Programme at AMHSS, Karachi · 17–18 October.",
     image: images.gavelAlt,
   },
   {

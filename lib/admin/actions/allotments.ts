@@ -76,8 +76,8 @@ export async function runMeritEngineAction() {
 
   const takenCountries = new Set<string>();
   let processed = 0;
+  let failed = 0;
   let skipped = 0;
-  const geminiUsed = Boolean(process.env.GEMINI_API_KEY);
 
   const registrationIds = confirmed.map((r) => r.id);
   const { data: existingAllotments } = await supabase
@@ -88,6 +88,18 @@ export async function runMeritEngineAction() {
   const existingByRegistration = new Map(
     (existingAllotments ?? []).map((row) => [row.registration_id, row]),
   );
+
+  const committees = (publishedCommittees ?? []).map((committee) => ({
+    ...committee,
+    country_pool: committee.country_pool ?? [],
+  }));
+
+  if (!committees.some((c) => (c.country_pool?.length ?? 0) > 0)) {
+    return {
+      error:
+        "No published committees with an allotment pool — add allotments on each committee first.",
+    };
+  }
 
   for (const reg of confirmed) {
     const existing = existingByRegistration.get(reg.id);
@@ -113,37 +125,57 @@ export async function runMeritEngineAction() {
       })),
     };
 
-    const suggestion = await suggestAllotment({
+    const result = await suggestAllotment({
       registration,
-      committees: (publishedCommittees ?? []).map((committee) => ({
-        ...committee,
-        country_pool: committee.country_pool ?? [],
-      })),
+      committees,
       takenCountries,
     });
 
-    await supabase.from("allotments").upsert(
-      {
-        registration_id: reg.id,
-        merit_score: suggestion.merit_score,
-        country: suggestion.country,
-        committee_id: suggestion.committee_id,
-        ai_reasoning: suggestion.reasoning ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "registration_id" },
-    );
-
-    processed++;
+    if (result.ok) {
+      await supabase.from("allotments").upsert(
+        {
+          registration_id: reg.id,
+          merit_score: result.merit_score,
+          country: result.country,
+          committee_id: result.committee_id,
+          ai_reasoning: result.reasoning ?? null,
+          is_override: false,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "registration_id" },
+      );
+      processed++;
+    } else {
+      await supabase.from("allotments").upsert(
+        {
+          registration_id: reg.id,
+          merit_score: null,
+          country: null,
+          committee_id: null,
+          ai_reasoning: result.reason,
+          is_override: false,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "registration_id" },
+      );
+      failed++;
+    }
   }
 
   revalidatePath("/admin/allotments");
-  const skipNote = skipped > 0 ? ` Skipped ${skipped} issued or manually overridden.` : "";
-  return {
-    success: geminiUsed
-      ? `Merit engine scored ${processed} registrations with Gemini.${skipNote}`
-      : `Merit engine scored ${processed} registrations (heuristic — set GEMINI_API_KEY for AI).${skipNote}`,
-  };
+  const parts = [
+    `Scored ${processed} with Gemini`,
+    failed > 0 ? `${failed} failed — set manually` : null,
+    skipped > 0 ? `skipped ${skipped} issued/overridden` : null,
+  ].filter(Boolean);
+
+  if (processed === 0 && failed > 0) {
+    return {
+      error: `Merit engine failed for ${failed} registration${failed === 1 ? "" : "s"}. Use Adjust to set allotments manually.`,
+    };
+  }
+
+  return { success: `${parts.join(". ")}.` };
 }
 
 export async function saveAllotmentOverrideAction(formData: FormData) {

@@ -8,168 +8,17 @@ import {
 import type {
   MeritCommittee,
   MeritRegistration,
+  MeritResult,
   MeritSuggestion,
 } from "@/lib/allotments/types";
-
-const EXPERIENCE_KEYWORDS = [
-  "award",
-  "best delegate",
-  "chair",
-  "secretary",
-  "mun",
-  "conference",
-  "diplomacy",
-  "resolution",
-  "crisis",
-  "ga",
-  "unsc",
-  "security council",
-  "delegate",
-  "head delegate",
-  "verbal",
-  "position paper",
-];
 
 function clampScore(value: number) {
   return Math.round(Math.min(100, Math.max(0, value)));
 }
 
-function heuristicMeritScore(reg: MeritRegistration, difficultyTier: string) {
-  const text = reg.mun_experience.toLowerCase();
-  let score = 35 + Math.min(30, reg.mun_experience.length / 6);
-
-  for (const keyword of EXPERIENCE_KEYWORDS) {
-    if (text.includes(keyword)) score += 4;
-  }
-
-  if (reg.type === "delegation") {
-    score += Math.min(12, reg.delegates.length * 2);
-  }
-
-  const tierBonus =
-    difficultyTier === "high" ? 12 : difficultyTier === "medium" ? 6 : 0;
-
-  return clampScore(score + tierBonus);
-}
-
 function committeesWithPool(committees: MeritCommittee[]) {
   return committees.filter(
     (committee) => resolveCommitteePool(committee.country_pool).length > 0,
-  );
-}
-
-function pickCommitteeFromPrefs(
-  reg: MeritRegistration,
-  committees: MeritCommittee[],
-  meritScore: number,
-) {
-  const prefIds = [
-    reg.committee_pref_1,
-    reg.committee_pref_2,
-    reg.committee_pref_3,
-  ].filter(Boolean) as string[];
-
-  const byId = new Map(committees.map((c) => [c.id, c]));
-
-  if (meritScore >= 75 && prefIds[0] && byId.has(prefIds[0])) {
-    return prefIds[0];
-  }
-  if (meritScore >= 55 && prefIds[1] && byId.has(prefIds[1])) {
-    return prefIds[1];
-  }
-  if (prefIds[2] && byId.has(prefIds[2])) return prefIds[2];
-  if (prefIds[0] && byId.has(prefIds[0])) return prefIds[0];
-
-  const tierOrder =
-    meritScore >= 70
-      ? (["high", "medium", "low"] as const)
-      : meritScore >= 45
-        ? (["medium", "low", "high"] as const)
-        : (["low", "medium", "high"] as const);
-
-  for (const tier of tierOrder) {
-    const match = committees.find((c) => c.difficulty_tier === tier);
-    if (match) return match.id;
-  }
-
-  return committees[0]?.id ?? "";
-}
-
-function agendaKeywordScore(agenda: string, country: string) {
-  const agendaLower = agenda.toLowerCase();
-  const countryLower = country.toLowerCase();
-  const tokens = countryLower.split(/\s+/).filter((t) => t.length > 2);
-
-  let score = 0;
-  for (const token of tokens) {
-    if (agendaLower.includes(token)) score += 3;
-  }
-
-  const regionalHints: Record<string, string[]> = {
-    "middle east": ["saudi", "iran", "egypt", "qatar", "uae", "israel", "turkey"],
-    africa: ["nigeria", "kenya", "south africa", "ethiopia", "ghana", "morocco"],
-    asia: ["india", "pakistan", "japan", "china", "korea", "indonesia", "vietnam"],
-    europe: ["germany", "france", "uk", "italy", "spain", "poland", "sweden"],
-    americas: ["brazil", "mexico", "argentina", "colombia", "canada", "chile"],
-    climate: ["norway", "sweden", "germany", "netherlands", "brazil"],
-    nuclear: ["iran", "pakistan", "india", "israel"],
-    refugee: ["turkey", "germany", "jordan", "lebanon", "bangladesh"],
-    trade: ["china", "usa", "germany", "japan", "singapore"],
-  };
-
-  for (const [topic, countries] of Object.entries(regionalHints)) {
-    if (!agendaLower.includes(topic)) continue;
-    for (const hint of countries) {
-      if (countryLower.includes(hint)) score += 5;
-    }
-  }
-
-  return score;
-}
-
-function heuristicCountry(
-  reg: MeritRegistration,
-  committee: MeritCommittee | undefined,
-  meritScore: number,
-  takenCountries: Set<string>,
-) {
-  const agenda = committee?.agenda ?? "";
-  const pool = resolveCommitteePool(committee?.country_pool);
-  if (!pool.length) {
-    throw new Error(
-      `Committee ${committee?.name ?? "unknown"} has no allotment pool.`,
-    );
-  }
-  const ranked = [...pool]
-    .map((country) => ({
-      country,
-      relevance: agendaKeywordScore(agenda, country),
-      meritFit: meritScore / 100,
-    }))
-    .sort((a, b) => {
-      const aScore = a.relevance * 2 + a.meritFit;
-      const bScore = b.relevance * 2 + b.meritFit;
-      return bScore - aScore;
-    });
-
-  const highMerit = meritScore >= 65;
-  const slice = highMerit ? ranked.slice(0, 15) : ranked.slice(5, 35);
-  const candidates = slice.length > 0 ? slice : ranked;
-
-  for (const entry of candidates) {
-    const key = entry.country.toLowerCase();
-    if (!takenCountries.has(key)) {
-      return entry.country;
-    }
-  }
-
-  for (const country of pool) {
-    const key = country.toLowerCase();
-    if (!takenCountries.has(key)) return country;
-  }
-
-  throw new Error(
-    `No available allotments left in pool for ${committee?.name ?? "committee"}.`,
   );
 }
 
@@ -220,13 +69,19 @@ async function suggestWithGemini(
   reg: MeritRegistration,
   committees: MeritCommittee[],
   takenCountries: Set<string>,
-): Promise<MeritSuggestion | null> {
+): Promise<{ suggestion: MeritSuggestion | null; detail?: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    return {
+      suggestion: null,
+      detail: "GEMINI_API_KEY is not set.",
+    };
+  }
 
   const genAI = new GoogleGenerativeAI(apiKey);
+  const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
   const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
+    model: modelName,
     generationConfig: { responseMimeType: "application/json" },
   });
 
@@ -238,7 +93,12 @@ async function suggestWithGemini(
     })
     .join("\n");
 
-  if (!committeeBlock) return null;
+  if (!committeeBlock) {
+    return {
+      suggestion: null,
+      detail: "No committees with an allotment pool.",
+    };
+  }
 
   const delegateBlock =
     reg.type === "delegation"
@@ -287,12 +147,31 @@ Return JSON only:
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     const parsed = parseGeminiJson(text);
-    if (!parsed) return null;
+    if (!parsed) {
+      return {
+        suggestion: null,
+        detail: "Gemini returned invalid JSON.",
+      };
+    }
 
-    return validateSuggestion(parsed, committees);
+    const validated = validateSuggestion(parsed, committees);
+    if (!validated) {
+      return {
+        suggestion: null,
+        detail:
+          "Gemini suggestion failed validation (committee, pool, or P5 rules).",
+      };
+    }
+
+    return { suggestion: validated };
   } catch (error) {
     console.error("[merit-engine] Gemini failed", error);
-    return null;
+    const message =
+      error instanceof Error ? error.message : "Unknown Gemini error";
+    return {
+      suggestion: null,
+      detail: message,
+    };
   }
 }
 
@@ -300,57 +179,34 @@ export async function suggestAllotment(params: {
   registration: MeritRegistration;
   committees: MeritCommittee[];
   takenCountries: Set<string>;
-}): Promise<MeritSuggestion> {
+}): Promise<MeritResult> {
   const { registration, committees, takenCountries } = params;
 
   const eligible = committeesWithPool(committees);
   if (!eligible.length) {
-    throw new Error(
-      "No published committees with an allotment pool — add allotments on each committee first.",
-    );
+    return {
+      ok: false,
+      reason:
+        "No published committees with an allotment pool — add allotments on each committee first.",
+    };
   }
 
-  const gemini = await suggestWithGemini(
+  const { suggestion, detail } = await suggestWithGemini(
     registration,
     eligible,
     takenCountries,
   );
 
-  if (gemini) {
-    takenCountries.add(gemini.country.toLowerCase());
-    return gemini;
+  if (!suggestion) {
+    return {
+      ok: false,
+      reason: `Model failed — set allotment manually.${detail ? ` (${detail})` : ""}`,
+    };
   }
 
-  const prefCommitteeId = pickCommitteeFromPrefs(
-    registration,
-    eligible,
-    heuristicMeritScore(
-      registration,
-      eligible.find((c) => c.id === registration.committee_pref_1)
-        ?.difficulty_tier ?? "medium",
-    ),
-  );
-  const committee =
-    eligible.find((c) => c.id === prefCommitteeId) ?? eligible[0];
-  const meritScore = heuristicMeritScore(
-    registration,
-    committee.difficulty_tier,
-  );
-  const country = heuristicCountry(
-    registration,
-    committee,
-    meritScore,
-    takenCountries,
-  );
-
-  takenCountries.add(country.toLowerCase());
-
+  takenCountries.add(suggestion.country.toLowerCase());
   return {
-    merit_score: meritScore,
-    committee_id: committee.id,
-    country,
-    reasoning: process.env.GEMINI_API_KEY
-      ? "Gemini unavailable — heuristic fallback used."
-      : "Heuristic scoring (set GEMINI_API_KEY for AI allotments).",
+    ok: true,
+    ...suggestion,
   };
 }

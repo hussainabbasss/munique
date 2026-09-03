@@ -7,33 +7,25 @@ import "../program.css";
 const DAYS = [
   {
     day: "Day 1",
+    date: "17 October",
     session: "Opening",
     items: [
       "Registration desk and check-in",
       "Opening ceremony and keynote address",
       "First committee sessions",
     ],
-    note: "Time blocks publish after final venue lock.",
+    note: "Exact time blocks are confirmed by the Executive Board before session.",
   },
   {
     day: "Day 2",
-    session: "Negotiation",
+    date: "18 October",
+    session: "Negotiation & closing",
     items: [
       "Moderated and unmoderated caucuses",
-      "Working paper circulation",
-      "Draft resolution submissions",
+      "Working paper circulation and draft resolutions",
+      "Final voting, awards, and closing remarks",
     ],
     note: "Committee-specific sequencing appears on final release.",
-  },
-  {
-    day: "Day 3",
-    session: "Closing",
-    items: [
-      "Final voting sessions",
-      "Award and recognition ceremony",
-      "Closing remarks",
-    ],
-    note: "Departure guidance and logistics are shared with schools.",
   },
 ];
 
@@ -63,14 +55,15 @@ function ScheduleComingSoon() {
         <div className="hall-inner">
           <div className="hall-meta">
             <span>Munique ’26 · Edition I</span>
-            <span>Programme</span>
-            <span>Coming soon</span>
+            <span>17–18 October 2026</span>
+            <span>AMHSS, Karachi</span>
           </div>
           <h1 className="hall-title">Coming soon</h1>
           <p className="hall-lede">
             The order of proceedings is still being finalised by the Executive
-            Board. It publishes here once venue and dates lock — check back
-            shortly.
+            Board. Edition I sits 17–18 October 2026 at Al Murtaza Higher
+            Secondary School (AMHSS), Karachi — the detailed clock publishes
+            here shortly.
           </p>
         </div>
       </header>
@@ -101,13 +94,14 @@ export default async function SchedulePage() {
         <div className="hall-inner">
           <div className="hall-meta">
             <span>Munique ’26 · Edition I</span>
-            <span>Three sittings</span>
-            <span>Dates TBD</span>
+            <span>Two sittings</span>
+            <span>17–18 October 2026</span>
           </div>
           <h1 className="hall-title">Order of proceedings</h1>
           <p className="hall-lede">
-            The complete programme is posted by the Executive Board after venue
-            lock. The order below stands; the clock follows.
+            Edition I convenes over two days at Al Murtaza Higher Secondary
+            School (AMHSS), Karachi. The order below stands; exact reporting
+            times follow from the Executive Board.
           </p>
         </div>
       </header>
@@ -119,12 +113,14 @@ export default async function SchedulePage() {
               <Reveal delay={Math.min(i, 4) * 70}>
                 <h2 className="display prog-day-title">
                   <span className="prog-day-n">{d.day}</span>
-                  <span className="prog-day-s">{d.session}</span>
+                  <span className="prog-day-s">
+                    {d.date} · {d.session}
+                  </span>
                 </h2>
                 <ol className="prog-times">
                   {d.items.map((item) => (
                     <li key={item} className="prog-time-row">
-                      <span className="prog-time">TBD</span>
+                      <span className="prog-time">{d.date}</span>
                       <span className="prog-event">{item}</span>
                     </li>
                   ))}
@@ -136,21 +132,23 @@ export default async function SchedulePage() {
         </div>
       </section>
 
-      <section className="sheet prog-venue-wrap" aria-label="Venue status">
+      <section className="sheet prog-venue-wrap" aria-label="Venue">
         <Reveal>
           <div className="prog-ink">
             <div className="prog-ink-meta">
-              <span>Venue status</span>
+              <span>Venue</span>
               <span className="prog-ink-tags">
-                <span className="tag tag-dark">Venue TBA</span>
-                <span className="tag tag-dark">Dates TBA</span>
+                <span className="tag tag-dark">AMHSS, Karachi</span>
+                <span className="tag tag-dark">17–18 October 2026</span>
               </span>
             </div>
-            <h2 className="display prog-ink-line">Venue to be announced</h2>
+            <h2 className="display prog-ink-line">
+              Al Murtaza Higher Secondary School
+            </h2>
             <p className="prog-ink-copy">
-              Venue and dates are under final confirmation. On lock, this page
-              publishes exact reporting times, hall allocation and
-              committee-room mapping.
+              AMHSS, Karachi hosts Edition I. Exact reporting times, hall
+              allocation, and committee-room mapping are published by the
+              Executive Board before session.
             </p>
             <SealLine aria-hidden className="prog-ink-seal" />
           </div>

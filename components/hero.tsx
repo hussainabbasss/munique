@@ -131,7 +131,7 @@ export async function Hero() {
           </div>
           <div className="home-hero-strip-cell">
             <dt>Dates</dt>
-            <dd>TBA</dd>
+            <dd>17–18 Oct</dd>
           </div>
         </dl>
       </div>

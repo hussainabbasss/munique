@@ -78,8 +78,8 @@ export default function AboutPage() {
               Edition I
             </h2>
             <div className="story-tag-row">
-              <span className="tag tag-dark">Dates · TBD</span>
-              <span className="tag tag-dark">Venue · TBD</span>
+              <span className="tag tag-dark">Dates · 17–18 October 2026</span>
+              <span className="tag tag-dark">Venue · AMHSS, Karachi</span>
             </div>
           </Reveal>
           <Reveal delay={120}>
@@ -89,8 +89,14 @@ export default function AboutPage() {
                 <dd className="story-spec-val">Model United Nations</dd>
               </div>
               <div className="story-spec-row">
-                <dt className="story-spec-key">Year</dt>
-                <dd className="story-spec-val">2026</dd>
+                <dt className="story-spec-key">Dates</dt>
+                <dd className="story-spec-val">17–18 October 2026</dd>
+              </div>
+              <div className="story-spec-row">
+                <dt className="story-spec-key">Venue</dt>
+                <dd className="story-spec-val">
+                  Al Murtaza Higher Secondary School (AMHSS), Karachi
+                </dd>
               </div>
               <div className="story-spec-row">
                 <dt className="story-spec-key">Capacity</dt>

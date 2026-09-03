@@ -201,6 +201,19 @@ export function AllotmentsManager({
       ? (row.registrations?.registration_id ?? "—")
       : row.registration_id;
 
+  const needsManualAllotment = (row: AllotmentRow) =>
+    !row.country || !row.committee_id;
+
+  const statusLabel = (row: AllotmentRow) => {
+    if (row.status === "issued") return "Issued";
+    if (needsManualAllotment(row)) {
+      return row.ai_reasoning?.startsWith("Model failed")
+        ? "Model failed"
+        : "Needs EB";
+    }
+    return "Pending";
+  };
+
   const selectedCommitteePool =
     committeeById.get(editCommitteeId)?.country_pool ?? [];
 
@@ -362,7 +375,18 @@ export function AllotmentsManager({
                   <td className="admin-allotment-cell-truncate" title={a.country ?? ""}>
                     {a.country ?? "—"}
                   </td>
-                  <td style={{ textTransform: "capitalize" }}>{a.status}</td>
+                  <td>
+                    <span
+                      className={
+                        needsManualAllotment(a)
+                          ? "admin-allotment-status-fail"
+                          : undefined
+                      }
+                      title={a.ai_reasoning ?? undefined}
+                    >
+                      {statusLabel(a)}
+                    </span>
+                  </td>
                   <td>
                     {allotmentEmailStatus(a.registrations, Boolean(a.country))}
                   </td>
@@ -370,10 +394,14 @@ export function AllotmentsManager({
                     <td>
                       <button
                         type="button"
-                        className="btn-admin-secondary"
+                        className={
+                          needsManualAllotment(a)
+                            ? "btn-admin-primary"
+                            : "btn-admin-secondary"
+                        }
                         onClick={() => openEdit(a)}
                       >
-                        Adjust
+                        {needsManualAllotment(a) ? "Set allotment" : "Adjust"}
                       </button>
                     </td>
                   )}
@@ -404,6 +432,13 @@ export function AllotmentsManager({
                 {editing.registrations?.registration_id}
               </p>
               <p className="admin-allotment-review-name">{displayName(editing)}</p>
+              {needsManualAllotment(editing) && (
+                <p className="admin-toast admin-toast-error" role="status">
+                  {editing.ai_reasoning?.startsWith("Model failed")
+                    ? "Model failed — choose committee and allotment below."
+                    : "No allotment yet — choose committee and allotment below."}
+                </p>
+              )}
               <dl className="admin-allotment-review-meta">
                 <div>
                   <dt>Merit score</dt>

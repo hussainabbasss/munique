@@ -1,8 +1,8 @@
 import { Reveal } from "@/components/reveal";
 
 const facts = [
-  { label: "Conference dates", value: null },
-  { label: "Venue", value: null },
+  { label: "Conference dates", value: "17–18 October 2026" },
+  { label: "Venue", value: "AMHSS, Karachi" },
   { label: "Delegate capacity", value: "250–300" },
   { label: "Edition", value: "I" },
 ] as const;

@@ -28,3 +28,7 @@ export type MeritSuggestion = {
   country: string;
   reasoning?: string;
 };
+
+export type MeritResult =
+  | ({ ok: true } & MeritSuggestion)
+  | { ok: false; reason: string };
