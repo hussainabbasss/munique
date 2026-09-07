@@ -1,6 +1,5 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { generateRegistrationId } from "@/lib/registration/id";
 import { computeFees } from "@/lib/registration/fees";
@@ -10,7 +9,6 @@ import {
   validateDelegateAbout,
   validateDelegationMembers,
   validateDelegationSchoolHead,
-  validatePaymentProof,
 } from "@/lib/registration/validation";
 import { fetchActivePricing } from "@/lib/registration/queries";
 import { sendRegistrationReceived } from "@/lib/email/send";
@@ -21,6 +19,23 @@ import type {
   Portal,
   SubmitResult,
 } from "@/lib/registration/types";
+import type { PricingConfig } from "@/lib/types/admin";
+
+function registrationEmailParams(
+  pricing: PricingConfig,
+  registrationId: string,
+  headEmail: string,
+  feeAmount: number,
+) {
+  return {
+    to: headEmail,
+    registrationId,
+    feeAmount,
+    bankAccountTitle: pricing.bank_account_title,
+    bankDetails: pricing.bank_details,
+    paymentInstructions: pricing.payment_instructions,
+  };
+}
 
 function parseDelegateDraft(formData: FormData): DelegateDraft {
   const brandAmbassadorName = String(
@@ -67,33 +82,6 @@ function parseDelegationDraft(formData: FormData): DelegationDraft {
   };
 }
 
-async function uploadPaymentProofFile(params: {
-  service: ReturnType<typeof createServiceClient>;
-  file: File;
-  registrationId: string;
-}) {
-  const { service, file, registrationId } = params;
-  if (!service) throw new Error("Supabase service client not configured.");
-
-  const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
-  if (!allowed.includes(file.type)) {
-    throw new Error("Payment screenshot must be an image under 5 MB.");
-  }
-
-  const extFromName = file.name.split(".").pop()?.toLowerCase() ?? "";
-  const ext = extFromName && extFromName.length <= 6 ? extFromName : "png";
-  const fileName = `${randomUUID()}.${ext}`;
-  const path = `${registrationId}/${fileName}`;
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const { error: uploadError } = await service.storage
-    .from("payment-proofs")
-    .upload(path, buffer, { contentType: file.type, upsert: true });
-
-  if (uploadError) throw uploadError;
-  return path;
-}
-
 export async function submitRegistrationAction(
   formData: FormData,
 ): Promise<SubmitResult> {
@@ -119,10 +107,6 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
   if (!service) {
     return { ok: false, error: "Registration is temporarily unavailable." };
   }
-
-  const paymentProofFile = formData.get("payment_proof") as File | null;
-  const paymentError = validatePaymentProof(paymentProofFile);
-  if (paymentError) return { ok: false, error: paymentError };
 
   const pricing = await fetchActivePricing();
   if (!pricing) {
@@ -168,17 +152,6 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
     const registrationId = await generateRegistrationId(service);
     const fees = computeFees(pricing, portal, 1);
 
-    let paymentProofPath: string;
-    try {
-      paymentProofPath = await uploadPaymentProofFile({
-        service,
-        file: paymentProofFile!,
-        registrationId,
-      });
-    } catch {
-      return { ok: false, error: "Payment screenshot upload failed. Try again." };
-    }
-
     const { data: registration, error: registrationError } = await service
       .from("registrations")
       .insert({
@@ -194,7 +167,7 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
         committee_pref_3: draft.committeePref3 || null,
         mun_experience: draft.munExperience,
         brand_ambassador_name: draft.brandAmbassadorName || null,
-        payment_proof_path: paymentProofPath,
+        payment_proof_path: null,
       })
       .select("id")
       .single();
@@ -218,10 +191,9 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
       return { ok: false, error: delegatesError.message };
     }
 
-    const emailResult = await sendRegistrationReceived({
-      to: headEmail,
-      registrationId,
-    });
+    const emailResult = await sendRegistrationReceived(
+      registrationEmailParams(pricing, registrationId, headEmail, fees.totalFee),
+    );
 
     if (emailResult.ok) {
       await service
@@ -270,17 +242,6 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
   const registrationId = await generateRegistrationId(service);
   const fees = computeFees(pricing, portal, delegateCount);
 
-  let paymentProofPath: string;
-  try {
-    paymentProofPath = await uploadPaymentProofFile({
-      service,
-      file: paymentProofFile!,
-      registrationId,
-    });
-  } catch {
-    return { ok: false, error: "Payment screenshot upload failed. Try again." };
-  }
-
   const { data: registration, error: registrationError } = await service
     .from("registrations")
     .insert({
@@ -296,7 +257,7 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
       committee_pref_3: draft.committeePref3 || null,
       mun_experience: draft.munExperience,
       brand_ambassador_name: draft.brandAmbassadorName || null,
-      payment_proof_path: paymentProofPath,
+      payment_proof_path: null,
     })
     .select("id")
     .single();
@@ -320,10 +281,9 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
     return { ok: false, error: delegatesError.message };
   }
 
-  const emailResult = await sendRegistrationReceived({
-    to: headEmail,
-    registrationId,
-  });
+  const emailResult = await sendRegistrationReceived(
+    registrationEmailParams(pricing, registrationId, headEmail, fees.totalFee),
+  );
 
   if (emailResult.ok) {
     await service

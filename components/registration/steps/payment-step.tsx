@@ -1,22 +1,19 @@
 "use client";
 
 import { formatPkr } from "@/lib/utils/format";
+import {
+  PAYMENT_WHATSAPP,
+  paymentWhatsAppLink,
+} from "@/lib/registration/payment";
 import type { FeeBreakdown } from "@/lib/registration/types";
 import type { PricingConfig } from "@/lib/types/admin";
 
 type PaymentStepProps = {
   pricing: PricingConfig;
   fees: FeeBreakdown;
-  paymentProofFile: File | null;
-  onPaymentProofFileChange: (file: File | null) => void;
 };
 
-export function PaymentStep({
-  pricing,
-  fees,
-  paymentProofFile,
-  onPaymentProofFileChange,
-}: PaymentStepProps) {
+export function PaymentStep({ pricing, fees }: PaymentStepProps) {
   return (
     <div>
       <div className="registration-payment-plate">
@@ -55,35 +52,22 @@ export function PaymentStep({
             {pricing.payment_instructions}
           </p>
         </div>
+        <div className="registration-payment-detail">
+          <p className="registration-label">Submit payment proof</p>
+          <p className="registration-payment-detail-value">
+            After transferring, send your payment screenshot on WhatsApp to{" "}
+            <a href={paymentWhatsAppLink()}>{PAYMENT_WHATSAPP}</a>. Include your
+            registration ID once you receive it.
+          </p>
+        </div>
       </div>
 
       <p className="registration-payment-notice">
-        Transfer the fee using the bank details above. Upload your payment
-        screenshot in the section below. Your registration is received when
-        you submit this form.{" "}
+        Transfer the fee using the bank details above, then submit this form.
+        Send your payment screenshot on WhatsApp after you register.{" "}
         <strong>Payment confirmation</strong> happens after staff verify your
         transfer — you will receive an email when that happens.
       </p>
-
-      <div className="registration-file-field" aria-labelledby="payment-proof-label">
-        <label id="payment-proof-label" className="registration-label" htmlFor="payment-proof">
-          Payment proof screenshot
-        </label>
-        <input
-          id="payment-proof"
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.currentTarget.files?.[0] ?? null;
-            onPaymentProofFileChange(file);
-          }}
-        />
-        <p className="registration-hint">
-          {paymentProofFile
-            ? `Selected: ${paymentProofFile.name}`
-            : "Upload a screenshot/photo of your payment confirmation."}
-        </p>
-      </div>
     </div>
   );
 }

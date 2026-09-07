@@ -1,4 +1,8 @@
 import { Resend } from "resend";
+import {
+  PAYMENT_WHATSAPP,
+  paymentWhatsAppLink,
+} from "@/lib/registration/payment";
 
 export type EmailResult =
   | { ok: true; id?: string }
@@ -66,11 +70,37 @@ async function sendEmail(params: {
 export async function sendRegistrationReceived(params: {
   to: string;
   registrationId: string;
+  feeAmount: number;
+  bankAccountTitle: string;
+  bankDetails: string;
+  paymentInstructions: string;
 }): Promise<EmailResult> {
+  const {
+    registrationId,
+    feeAmount,
+    bankAccountTitle,
+    bankDetails,
+    paymentInstructions,
+  } = params;
+
+  const feeLabel = `PKR ${feeAmount.toLocaleString("en-PK")}`;
+  const whatsapp = PAYMENT_WHATSAPP;
+  const whatsappHref = paymentWhatsAppLink();
+
   const html = baseHtml(`
     <p>Your registration has been received.</p>
-    <p>Registration ID: <strong style="font-family: monospace;">${escapeHtml(params.registrationId)}</strong></p>
-    <p>We have received your payment screenshot and will review it shortly. You will receive another email once we have processed your payment.</p>
+    <p>Registration ID: <strong style="font-family: monospace;">${escapeHtml(registrationId)}</strong></p>
+    <p>Amount due: <strong>${escapeHtml(feeLabel)}</strong></p>
+    <p style="margin-top: 1.5rem;"><strong>Payment details</strong></p>
+    <p>Account title: ${escapeHtml(bankAccountTitle)}</p>
+    <p style="white-space: pre-wrap;">${escapeHtml(bankDetails)}</p>
+    <p style="white-space: pre-wrap;">${escapeHtml(paymentInstructions)}</p>
+    <p style="margin-top: 1.5rem;"><strong>Submit your payment screenshot</strong></p>
+    <p>After transferring, send your payment screenshot on WhatsApp to
+      <a href="${whatsappHref}">${escapeHtml(whatsapp)}</a>
+      and include your registration ID (<strong style="font-family: monospace;">${escapeHtml(registrationId)}</strong>).
+    </p>
+    <p>You will receive another email once staff have verified your payment.</p>
   `);
 
   return sendEmail({

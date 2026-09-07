@@ -19,7 +19,6 @@ import {
   validateDelegateAbout,
   validateDelegationMembers,
   validateDelegationSchoolHead,
-  validatePaymentProof,
 } from "@/lib/registration/validation";
 import type {
   DelegateDraft,
@@ -30,7 +29,7 @@ import type {
 const DELEGATE_STEPS = [
   { title: "About you" },
   { title: "Committee preferences" },
-  { title: "Payment" },
+  { title: "Payment instructions" },
   { title: "Review" },
   { title: "Confirmation" },
 ] as const;
@@ -39,7 +38,7 @@ const DELEGATION_STEPS = [
   { title: "Delegation & head" },
   { title: "Your delegation" },
   { title: "Committee preferences" },
-  { title: "Payment" },
+  { title: "Payment instructions" },
   { title: "Review" },
   { title: "Confirmation" },
 ] as const;
@@ -60,7 +59,6 @@ export function RegistrationWizard({
     registrationId: string;
     headEmail: string;
   } | null>(null);
-  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const { draft, updateDraft, hydrated } = useRegistrationDraft(portal);
 
@@ -94,9 +92,7 @@ export function RegistrationWizard({
         }
         return validateCommitteePrefs(delegateDraft, committees);
       }
-      if (stepIndex === 2) {
-        return validatePaymentProof(paymentProofFile);
-      }
+      if (stepIndex === 2) return null;
       return null;
     }
 
@@ -109,9 +105,7 @@ export function RegistrationWizard({
       }
       return validateCommitteePrefs(delegationDraft, committees);
     }
-    if (stepIndex === 3) {
-      return validatePaymentProof(paymentProofFile);
-    }
+    if (stepIndex === 3) return null;
     return null;
   };
 
@@ -131,12 +125,6 @@ export function RegistrationWizard({
   };
 
   const handleSubmit = async () => {
-    const paymentError = validatePaymentProof(paymentProofFile);
-    if (paymentError) {
-      setSubmitError(paymentError);
-      return;
-    }
-
     setSubmitError(null);
     setSubmitting(true);
 
@@ -162,10 +150,6 @@ export function RegistrationWizard({
       formData.set("committee_pref_3", draft.committeePref3);
       formData.set("mun_experience", draft.munExperience);
       formData.set("brand_ambassador_name", draft.brandAmbassadorName);
-
-      if (paymentProofFile) {
-        formData.append("payment_proof", paymentProofFile);
-      }
 
       const response = await submitRegistrationAction(formData);
 
@@ -290,12 +274,7 @@ export function RegistrationWizard({
 
           {((portal === "delegate" && stepIndex === 2) ||
             (portal === "delegation" && stepIndex === 3)) && (
-            <PaymentStep
-              pricing={pricing}
-              fees={fees}
-              paymentProofFile={paymentProofFile}
-              onPaymentProofFileChange={setPaymentProofFile}
-            />
+            <PaymentStep pricing={pricing} fees={fees} />
           )}
 
           {isReview && (

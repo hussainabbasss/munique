@@ -60,8 +60,10 @@ export function ConfirmationStep({
         </p>
       )}
       <p className="registration-confirmation-note">
-        Save your registration ID. You will receive an email at {headEmail}.
-        Payment verification is pending.
+        Save your registration ID. You will receive an email at {headEmail} with
+        payment details. Transfer the fee, then send your payment screenshot on
+        WhatsApp to 03214284689 with this registration ID. Payment verification
+        is pending.
       </p>
       <div className="registration-confirmation-links">
         <Link

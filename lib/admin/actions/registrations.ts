@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { sendPaymentConfirmed, sendRegistrationReceived } from "@/lib/email/send";
+import { fetchActivePricing } from "@/lib/registration/queries";
 import {
   requireAdminUser,
   requireRegistrationStaffOrAdmin,
@@ -165,15 +166,24 @@ export async function resendRegistrationEmailAction(registrationId: string) {
 
   const { data: reg } = await supabase
     .from("registrations")
-    .select("id, registration_id, head_email")
+    .select("id, registration_id, head_email, fee_amount")
     .eq("id", registrationId)
     .single();
 
   if (!reg) return { error: "Registration not found." };
 
+  const pricing = await fetchActivePricing();
+  if (!pricing) {
+    return { error: "Active pricing is not configured." };
+  }
+
   const emailResult = await sendRegistrationReceived({
     to: reg.head_email,
     registrationId: reg.registration_id,
+    feeAmount: reg.fee_amount,
+    bankAccountTitle: pricing.bank_account_title,
+    bankDetails: pricing.bank_details,
+    paymentInstructions: pricing.payment_instructions,
   });
 
   if (!emailResult.ok) {

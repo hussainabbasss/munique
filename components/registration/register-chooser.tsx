@@ -30,7 +30,7 @@ export function RegisterChooser({ pricing }: RegisterChooserProps) {
           <ul className="registration-portal-spec" aria-hidden="true">
             <li>For — one delegate, any school</li>
             <li>Need — email · committee preferences</li>
-            <li>Need — payment proof screenshot</li>
+            <li>Pay — bank transfer · proof via WhatsApp</li>
           </ul>
           <div className="registration-portal-meta">
             <div className="registration-portal-fee-block">
@@ -69,7 +69,7 @@ export function RegisterChooser({ pricing }: RegisterChooserProps) {
               For — {DELEGATION_MIN_DELEGATES}–{DELEGATION_MAX_DELEGATES} delegates
             </li>
             <li>Need — head delegate · member list</li>
-            <li>Need — payment proof screenshot</li>
+            <li>Pay — bank transfer · proof via WhatsApp</li>
           </ul>
           <div className="registration-portal-meta">
             <div className="registration-portal-fee-block">

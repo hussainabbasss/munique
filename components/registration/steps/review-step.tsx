@@ -231,7 +231,9 @@ export function ReviewStep({
             </span>
           </div>
           <p className="registration-review-footnote">
-            Payment will be verified by staff after you submit.
+            Transfer using the bank details on the payment step, then send your
+            payment screenshot on WhatsApp to 03214284689 with your registration
+            ID. Staff will confirm payment after verification.
           </p>
         </div>
       </section>
