@@ -1,11 +1,18 @@
+import { CommitteePrefFields } from "@/components/registration/committee-pref-fields";
+import type { Committee } from "@/lib/types/admin";
 import type { DelegationDraft } from "@/lib/registration/types";
 
 type SchoolHeadStepProps = {
   draft: DelegationDraft;
+  committees: Committee[];
   onChange: (patch: Partial<DelegationDraft>) => void;
 };
 
-export function SchoolHeadStep({ draft, onChange }: SchoolHeadStepProps) {
+export function SchoolHeadStep({
+  draft,
+  committees,
+  onChange,
+}: SchoolHeadStepProps) {
   return (
     <div className="registration-field-group">
       <div>
@@ -63,6 +70,25 @@ export function SchoolHeadStep({ draft, onChange }: SchoolHeadStepProps) {
         />
         <p className="registration-field-hint">Optional — enter name if applicable</p>
       </div>
+
+      <section className="registration-person-prefs">
+        <h3 className="registration-person-prefs-title">
+          Head — committee &amp; experience
+        </h3>
+        <CommitteePrefFields
+          idPrefix="head"
+          committees={committees}
+          pref1={draft.headCommitteePref1}
+          pref2={draft.headCommitteePref2}
+          pref3={draft.headCommitteePref3}
+          munExperience={draft.munExperience}
+          hideIntro
+          onPref1Change={(value) => onChange({ headCommitteePref1: value })}
+          onPref2Change={(value) => onChange({ headCommitteePref2: value })}
+          onPref3Change={(value) => onChange({ headCommitteePref3: value })}
+          onMunExperienceChange={(value) => onChange({ munExperience: value })}
+        />
+      </section>
     </div>
   );
 }

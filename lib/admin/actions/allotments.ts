@@ -3,50 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { suggestAllotment } from "@/lib/allotments/merit-engine";
-import type { MeritRegistration } from "@/lib/allotments/types";
-import {
-  sendAllotmentIssued,
-  sendDelegationAllotmentIssued,
-} from "@/lib/email/send";
+import type { MeritDelegateInput } from "@/lib/allotments/types";
+import { sendAllotmentIssued } from "@/lib/email/send";
 import { requireAdminRole, requireAdminUser } from "@/lib/admin/helpers";
-
-type DelegateRow = {
-  id: string;
-  email: string | null;
-  full_name: string;
-  is_head_delegate: boolean;
-  allotment_email_sent_at: string | null;
-};
-
-type RegistrationRow = {
-  payment_status: string;
-  type: "delegate" | "delegation";
-  head_email: string;
-  school: string;
-  registration_id: string;
-  delegates: DelegateRow[] | null;
-};
-
-function delegatesNeedingEmail(
-  reg: RegistrationRow,
-  allotmentCountry: string | null,
-) {
-  if (!reg || reg.payment_status !== "confirmed" || !allotmentCountry) {
-    return [];
-  }
-
-  const delegates = reg.delegates ?? [];
-
-  if (reg.type === "delegation") {
-    const head =
-      delegates.find((d) => d.is_head_delegate && d.email) ??
-      delegates.find((d) => d.email);
-    if (!head || head.allotment_email_sent_at) return [];
-    return [head];
-  }
-
-  return delegates.filter((d) => d.email && !d.allotment_email_sent_at);
-}
 
 export async function runMeritEngineAction() {
   await requireAdminUser();
@@ -56,7 +15,7 @@ export async function runMeritEngineAction() {
     supabase
       .from("registrations")
       .select(
-        "id, type, school, mun_experience, committee_pref_1, committee_pref_2, committee_pref_3, delegates(full_name, is_head_delegate)",
+        "id, type, school, mun_experience, payment_status, delegates(id, full_name, is_head_delegate, committee_pref_1, committee_pref_2, committee_pref_3, mun_experience)",
       )
       .eq("payment_status", "confirmed"),
     supabase
@@ -74,21 +33,6 @@ export async function runMeritEngineAction() {
     return { error: "No published committees — publish committees first." };
   }
 
-  const takenCountries = new Set<string>();
-  let processed = 0;
-  let failed = 0;
-  let skipped = 0;
-
-  const registrationIds = confirmed.map((r) => r.id);
-  const { data: existingAllotments } = await supabase
-    .from("allotments")
-    .select("registration_id, status, is_override, country")
-    .in("registration_id", registrationIds);
-
-  const existingByRegistration = new Map(
-    (existingAllotments ?? []).map((row) => [row.registration_id, row]),
-  );
-
   const committees = (publishedCommittees ?? []).map((committee) => ({
     ...committee,
     country_pool: committee.country_pool ?? [],
@@ -101,8 +45,47 @@ export async function runMeritEngineAction() {
     };
   }
 
+  const people: MeritDelegateInput[] = [];
   for (const reg of confirmed) {
-    const existing = existingByRegistration.get(reg.id);
+    for (const delegate of reg.delegates ?? []) {
+      people.push({
+        id: delegate.id,
+        registration_id: reg.id,
+        full_name: delegate.full_name,
+        is_head_delegate: delegate.is_head_delegate,
+        type: reg.type as "delegate" | "delegation",
+        school: reg.school,
+        mun_experience:
+          (delegate.mun_experience && String(delegate.mun_experience).trim()) ||
+          reg.mun_experience,
+        committee_pref_1: delegate.committee_pref_1,
+        committee_pref_2: delegate.committee_pref_2,
+        committee_pref_3: delegate.committee_pref_3,
+      });
+    }
+  }
+
+  if (!people.length) {
+    return { error: "No delegates found on confirmed registrations." };
+  }
+
+  const delegateIds = people.map((p) => p.id);
+  const { data: existingAllotments } = await supabase
+    .from("allotments")
+    .select("delegate_id, status, is_override, country")
+    .in("delegate_id", delegateIds);
+
+  const existingByDelegate = new Map(
+    (existingAllotments ?? []).map((row) => [row.delegate_id, row]),
+  );
+
+  const takenCountries = new Set<string>();
+  let processed = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (const person of people) {
+    const existing = existingByDelegate.get(person.id);
     if (existing?.status === "issued" || existing?.is_override) {
       skipped++;
       if (existing.country) {
@@ -111,22 +94,8 @@ export async function runMeritEngineAction() {
       continue;
     }
 
-    const registration: MeritRegistration = {
-      id: reg.id,
-      type: reg.type as "delegate" | "delegation",
-      mun_experience: reg.mun_experience,
-      school: reg.school,
-      committee_pref_1: reg.committee_pref_1,
-      committee_pref_2: reg.committee_pref_2,
-      committee_pref_3: reg.committee_pref_3,
-      delegates: (reg.delegates ?? []).map((d) => ({
-        full_name: d.full_name,
-        is_head_delegate: d.is_head_delegate,
-      })),
-    };
-
     const result = await suggestAllotment({
-      registration,
+      person,
       committees,
       takenCountries,
     });
@@ -134,7 +103,8 @@ export async function runMeritEngineAction() {
     if (result.ok) {
       await supabase.from("allotments").upsert(
         {
-          registration_id: reg.id,
+          registration_id: person.registration_id,
+          delegate_id: person.id,
           merit_score: result.merit_score,
           country: result.country,
           committee_id: result.committee_id,
@@ -142,13 +112,14 @@ export async function runMeritEngineAction() {
           is_override: false,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "registration_id" },
+        { onConflict: "delegate_id" },
       );
       processed++;
     } else {
       await supabase.from("allotments").upsert(
         {
-          registration_id: reg.id,
+          registration_id: person.registration_id,
+          delegate_id: person.id,
           merit_score: null,
           country: null,
           committee_id: null,
@@ -156,7 +127,7 @@ export async function runMeritEngineAction() {
           is_override: false,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "registration_id" },
+        { onConflict: "delegate_id" },
       );
       failed++;
     }
@@ -164,14 +135,14 @@ export async function runMeritEngineAction() {
 
   revalidatePath("/admin/allotments");
   const parts = [
-    `Scored ${processed} with Gemini`,
+    `Scored ${processed} delegates with Gemini`,
     failed > 0 ? `${failed} failed — set manually` : null,
     skipped > 0 ? `skipped ${skipped} issued/overridden` : null,
   ].filter(Boolean);
 
   if (processed === 0 && failed > 0) {
     return {
-      error: `Merit engine failed for ${failed} registration${failed === 1 ? "" : "s"}. Use Adjust to set allotments manually.`,
+      error: `Merit engine failed for ${failed} delegate${failed === 1 ? "" : "s"}. Use Adjust to set allotments manually.`,
     };
   }
 
@@ -181,23 +152,33 @@ export async function runMeritEngineAction() {
 export async function saveAllotmentOverrideAction(formData: FormData) {
   await requireAdminUser();
 
+  const allotmentId = String(formData.get("allotment_id") ?? "");
   const registrationId = String(formData.get("registration_id") ?? "");
+  const delegateId = String(formData.get("delegate_id") ?? "");
   const country = String(formData.get("country") ?? "").trim();
   const committeeId = String(formData.get("committee_id") ?? "") || null;
   const overrideNote = String(formData.get("override_note") ?? "") || null;
 
+  if (!delegateId || !registrationId) {
+    return { error: "Missing delegate for allotment override." };
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.from("allotments").upsert(
-    {
-      registration_id: registrationId,
-      country,
-      committee_id: committeeId,
-      is_override: true,
-      override_note: overrideNote,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "registration_id" },
-  );
+  const payload = {
+    registration_id: registrationId,
+    delegate_id: delegateId,
+    country,
+    committee_id: committeeId,
+    is_override: true,
+    override_note: overrideNote,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = allotmentId
+    ? await supabase.from("allotments").update(payload).eq("id", allotmentId)
+    : await supabase.from("allotments").upsert(payload, {
+        onConflict: "delegate_id",
+      });
 
   if (error) return { error: error.message };
 
@@ -212,13 +193,15 @@ export async function issueAllotmentsAction() {
   const { data: allotments } = await supabase
     .from("allotments")
     .select(
-      "id, registration_id, country, status, registrations(payment_status, type, head_email, school, registration_id, delegates(id, email, full_name, is_head_delegate, allotment_email_sent_at)), committees(name)",
+      "id, registration_id, delegate_id, country, status, registrations(payment_status, type, registration_id, school), delegates(id, email, full_name, is_head_delegate, allotment_email_sent_at), committees(name)",
     )
     .not("country", "is", null);
 
   const eligible =
     allotments?.filter((a) => {
-      const reg = a.registrations as unknown as RegistrationRow | null;
+      const reg = a.registrations as unknown as {
+        payment_status: string;
+      } | null;
       return reg?.payment_status === "confirmed";
     }) ?? [];
 
@@ -229,61 +212,46 @@ export async function issueAllotmentsAction() {
   const now = new Date().toISOString();
   let emailsSent = 0;
   let allotmentsNewlyIssued = 0;
+  let skippedNoEmail = 0;
+  let sendFailures = 0;
 
   for (const allotment of eligible) {
-    const reg = allotment.registrations as unknown as RegistrationRow;
+    const delegate = allotment.delegates as unknown as {
+      id: string;
+      email: string | null;
+      full_name: string;
+      allotment_email_sent_at: string | null;
+    } | null;
     const committee = allotment.committees as unknown as { name: string } | null;
-    const targets = delegatesNeedingEmail(reg, allotment.country);
 
-    if (!targets.length) continue;
-
-    let sentForAllotment = 0;
-    const allDelegates = reg.delegates ?? [];
-
-    if (reg.type === "delegation") {
-      const head = targets[0];
-      if (!head?.email) continue;
-
-      const memberNames = allDelegates.map((d) => d.full_name);
-      const result = await sendDelegationAllotmentIssued({
-        to: head.email,
-        groupName: reg.school || "Your delegation",
-        committee: committee?.name ?? "TBD",
-        country: allotment.country ?? "TBD",
-        memberNames,
-        delegateCount: allDelegates.length,
-      });
-
-      if (!result.ok) continue;
-
-      emailsSent++;
-      sentForAllotment++;
-
-      await supabase
-        .from("delegates")
-        .update({ allotment_email_sent_at: now })
-        .eq("registration_id", allotment.registration_id);
-    } else {
-      for (const delegate of targets) {
-        if (!delegate.email) continue;
-        const result = await sendAllotmentIssued({
-          to: delegate.email,
-          committee: committee?.name ?? "TBD",
-          country: allotment.country ?? "TBD",
-        });
-        if (!result.ok) continue;
-
-        emailsSent++;
-        sentForAllotment++;
-
-        await supabase
-          .from("delegates")
-          .update({ allotment_email_sent_at: now })
-          .eq("id", delegate.id);
-      }
+    if (!delegate) continue;
+    if (delegate.allotment_email_sent_at) continue;
+    if (!delegate.email) {
+      skippedNoEmail++;
+      continue;
     }
 
-    if (sentForAllotment === 0) continue;
+    const result = await sendAllotmentIssued({
+      to: delegate.email,
+      committee: committee?.name ?? "TBD",
+      country: allotment.country ?? "TBD",
+    });
+
+    if (!result.ok) {
+      sendFailures++;
+      console.error("[allotments] issue email failed", {
+        delegateId: delegate.id,
+        error: result.error,
+      });
+      continue;
+    }
+
+    emailsSent++;
+
+    await supabase
+      .from("delegates")
+      .update({ allotment_email_sent_at: now })
+      .eq("id", delegate.id);
 
     if (allotment.status === "pending") {
       await supabase
@@ -305,6 +273,16 @@ export async function issueAllotmentsAction() {
   }
 
   if (emailsSent === 0) {
+    if (sendFailures > 0) {
+      return {
+        error: `Allotment emails failed to send (${sendFailures}). Check Resend logs.`,
+      };
+    }
+    if (skippedNoEmail > 0) {
+      return {
+        error: `${skippedNoEmail} delegate(s) have an allotment but no email address.`,
+      };
+    }
     return { error: "No delegates are waiting for allotment emails." };
   }
 
@@ -313,6 +291,6 @@ export async function issueAllotmentsAction() {
     success:
       allotmentsNewlyIssued > 0
         ? `Issued ${allotmentsNewlyIssued} allotments. ${emailsSent} emails sent.`
-        : `Sent ${emailsSent} allotment emails to new delegates.`,
+        : `Sent ${emailsSent} allotment emails.`,
   };
 }

@@ -7,7 +7,7 @@ import {
 } from "@/lib/allotments/countries";
 import type {
   MeritCommittee,
-  MeritRegistration,
+  MeritDelegateInput,
   MeritResult,
   MeritSuggestion,
 } from "@/lib/allotments/types";
@@ -66,7 +66,7 @@ function validateSuggestion(
 }
 
 async function suggestWithGemini(
-  reg: MeritRegistration,
+  person: MeritDelegateInput,
   committees: MeritCommittee[],
   takenCountries: Set<string>,
 ): Promise<{ suggestion: MeritSuggestion | null; detail?: string }> {
@@ -100,37 +100,30 @@ async function suggestWithGemini(
     };
   }
 
-  const delegateBlock =
-    reg.type === "delegation"
-      ? reg.delegates
-          .map((d) => `  - ${d.full_name}${d.is_head_delegate ? " (head)" : ""}`)
-          .join("\n")
-      : `  - ${reg.delegates[0]?.full_name ?? "Delegate"}`;
-
   const takenList = [...takenCountries].join(", ") || "none";
 
   const prompt = `You are the allotment advisor for Munique 2026, a Model UN conference.
 
-Score this registration and suggest ONE committee and ONE country assignment.
+Score this individual delegate and suggest ONE committee and ONE country/seat assignment.
 
 RULES (strict):
 1. NEVER assign P5 countries (${P5_COUNTRIES.join(", ")}). Those are reserved for manual EB assignment only.
-2. Choose country ONLY from the selected committee's allotment_pool (listed per committee below). Never use a country outside that committee's pool.
-3. More experienced delegates/delegations should receive countries MORE central/relevant to the committee agenda.
-4. Less experienced delegates should receive countries still plausible but less agenda-central.
-5. For delegations: score the ENTIRE group as one unit using combined experience. Assign ONE shared country for all delegates in the delegation.
-6. Prefer committee preferences when merit supports the difficulty tier (pref 1 = ambitious, pref 3 = fallback).
-7. Avoid countries already assigned in this batch when possible: ${takenList}
+2. Choose country/seat ONLY from the selected committee's allotment_pool (listed per committee below). Never use a seat outside that committee's pool.
+3. More experienced delegates should receive seats MORE central/relevant to the committee agenda.
+4. Less experienced delegates should receive seats still plausible but less agenda-central.
+5. Prefer the delegate's committee preferences when merit supports the difficulty tier (pref 1 = ambitious, pref 3 = fallback).
+6. Avoid seats already assigned in this batch when possible: ${takenList}
+7. Allot this person independently — even if they registered with a school delegation.
 
-Registration:
-- type: ${reg.type}
-- group/school: ${reg.school}
-- mun_experience: ${reg.mun_experience}
-- committee_pref_1: ${reg.committee_pref_1 ?? "none"}
-- committee_pref_2: ${reg.committee_pref_2 ?? "none"}
-- committee_pref_3: ${reg.committee_pref_3 ?? "none"}
-- delegates (${reg.delegates.length}):
-${delegateBlock}
+Delegate:
+- name: ${person.full_name}
+- role: ${person.is_head_delegate ? "head" : "member"}
+- registration_type: ${person.type}
+- school/group: ${person.school}
+- mun_experience: ${person.mun_experience}
+- committee_pref_1: ${person.committee_pref_1 ?? "none"}
+- committee_pref_2: ${person.committee_pref_2 ?? "none"}
+- committee_pref_3: ${person.committee_pref_3 ?? "none"}
 
 Published committees:
 ${committeeBlock}
@@ -176,11 +169,11 @@ Return JSON only:
 }
 
 export async function suggestAllotment(params: {
-  registration: MeritRegistration;
+  person: MeritDelegateInput;
   committees: MeritCommittee[];
   takenCountries: Set<string>;
 }): Promise<MeritResult> {
-  const { registration, committees, takenCountries } = params;
+  const { person, committees, takenCountries } = params;
 
   const eligible = committeesWithPool(committees);
   if (!eligible.length) {
@@ -192,7 +185,7 @@ export async function suggestAllotment(params: {
   }
 
   const { suggestion, detail } = await suggestWithGemini(
-    registration,
+    person,
     eligible,
     takenCountries,
   );

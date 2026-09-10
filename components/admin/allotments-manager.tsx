@@ -13,6 +13,7 @@ import {
 import { CountryPicker } from "@/components/admin/country-picker";
 
 type DelegateRow = {
+  id: string;
   full_name: string;
   is_head_delegate: boolean;
   email: string | null;
@@ -22,6 +23,7 @@ type DelegateRow = {
 type AllotmentRow = {
   id: string;
   registration_id: string;
+  delegate_id: string;
   merit_score: number | null;
   country: string | null;
   committee_id: string | null;
@@ -32,8 +34,8 @@ type AllotmentRow = {
     payment_status: string;
     type: "delegate" | "delegation";
     school: string;
-    delegates: DelegateRow[];
   } | null;
+  delegates: DelegateRow | null;
   committees: { name: string } | null;
 };
 
@@ -48,7 +50,7 @@ type AwaitingRow = {
   registration_id: string;
   type: "delegate" | "delegation";
   school: string;
-  delegates: DelegateRow[];
+  delegate: DelegateRow;
 };
 
 type StatusTab = "pending" | "issued";
@@ -64,17 +66,6 @@ type Props = {
   pendingDelegationEmails: number;
   canIssue: boolean;
 };
-
-function matchesType(
-  row: { registrations?: { type: TypeTab } | null },
-  typeTab: TypeTab,
-) {
-  return row.registrations?.type === typeTab;
-}
-
-function matchesAwaitingType(row: AwaitingRow, typeTab: TypeTab) {
-  return row.type === typeTab;
-}
 
 export function AllotmentsManager({
   allotments,
@@ -120,7 +111,7 @@ export function AllotmentsManager({
   );
 
   const byType = useMemo(
-    () => allotments.filter((row) => matchesType(row, typeTab)),
+    () => allotments.filter((row) => row.registrations?.type === typeTab),
     [allotments, typeTab],
   );
 
@@ -132,6 +123,7 @@ export function AllotmentsManager({
             row.registrations,
             row.status,
             Boolean(row.country),
+            row.delegates,
           ),
       ),
     [byType],
@@ -144,6 +136,7 @@ export function AllotmentsManager({
           row.registrations,
           row.status,
           Boolean(row.country),
+          row.delegates,
         ),
       ),
     [byType],
@@ -152,7 +145,7 @@ export function AllotmentsManager({
   const visibleRows = statusTab === "pending" ? pendingRows : issuedRows;
 
   const awaitingByType = useMemo(
-    () => awaiting.filter((row) => matchesAwaitingType(row, typeTab)),
+    () => awaiting.filter((row) => row.type === typeTab),
     [awaiting, typeTab],
   );
 
@@ -177,23 +170,21 @@ export function AllotmentsManager({
   };
 
   const displayName = (row: AllotmentRow | AwaitingRow) => {
-    const reg = "registrations" in row ? row.registrations : row;
-    if (!reg) return "—";
-
-    if (reg.type === "delegation") {
-      const count = reg.delegates.length;
-      const head =
-        reg.delegates.find((d) => d.is_head_delegate)?.full_name ??
-        reg.delegates[0]?.full_name ??
-        "—";
-      return `${reg.school || head} (${count} delegates)`;
+    if ("delegate" in row) {
+      const suffix =
+        row.type === "delegation"
+          ? ` · ${row.school}${row.delegate.is_head_delegate ? " (head)" : ""}`
+          : "";
+      return `${row.delegate.full_name}${suffix}`;
     }
 
-    return (
-      reg.delegates.find((d) => d.is_head_delegate)?.full_name ??
-      reg.delegates[0]?.full_name ??
-      "—"
-    );
+    const person = row.delegates;
+    const reg = row.registrations;
+    if (!person) return "—";
+    if (reg?.type === "delegation") {
+      return `${person.full_name} · ${reg.school}${person.is_head_delegate ? " (head)" : ""}`;
+    }
+    return person.full_name;
   };
 
   const registrationId = (row: AllotmentRow | AwaitingRow) =>
@@ -266,7 +257,7 @@ export function AllotmentsManager({
             className={`admin-allotment-segment${typeTab === "delegation" ? " admin-allotment-segment-active" : ""}`}
             onClick={() => setTypeTab("delegation")}
           >
-            Delegations ({delegationCount})
+            Delegation members ({delegationCount})
           </button>
         </div>
       </div>
@@ -291,8 +282,7 @@ export function AllotmentsManager({
               Awaiting merit engine ({awaitingByType.length})
             </h2>
             <p className="admin-field-hint">
-              Confirmed {typeTab === "delegation" ? "delegations" : "delegates"}{" "}
-              without allotment suggestions yet.
+              Confirmed people without allotment suggestions yet.
             </p>
           </div>
           <ul className="admin-allotment-awaiting-list">
@@ -340,7 +330,7 @@ export function AllotmentsManager({
           <thead>
             <tr>
               <th>ID</th>
-              <th>{typeTab === "delegation" ? "Delegation" : "Name"}</th>
+              <th>Name</th>
               <th>Merit</th>
               <th>Committee</th>
               <th>Country</th>
@@ -357,8 +347,8 @@ export function AllotmentsManager({
                   className="admin-empty"
                 >
                   {statusTab === "pending"
-                    ? `No pending ${typeTab === "delegation" ? "delegation" : "delegate"} allotments — run merit engine on confirmed registrations`
-                    : `No issued ${typeTab === "delegation" ? "delegations" : "delegates"} yet`}
+                    ? "No pending allotments — run merit engine on confirmed registrations"
+                    : "No issued allotments yet"}
                 </td>
               </tr>
             ) : (
@@ -369,10 +359,16 @@ export function AllotmentsManager({
                     {displayName(a)}
                   </td>
                   <td className="mono">{a.merit_score ?? "—"}</td>
-                  <td className="admin-allotment-cell-truncate" title={a.committees?.name ?? ""}>
+                  <td
+                    className="admin-allotment-cell-truncate"
+                    title={a.committees?.name ?? ""}
+                  >
                     {a.committees?.name ?? "—"}
                   </td>
-                  <td className="admin-allotment-cell-truncate" title={a.country ?? ""}>
+                  <td
+                    className="admin-allotment-cell-truncate"
+                    title={a.country ?? ""}
+                  >
                     {a.country ?? "—"}
                   </td>
                   <td>
@@ -388,7 +384,11 @@ export function AllotmentsManager({
                     </span>
                   </td>
                   <td>
-                    {allotmentEmailStatus(a.registrations, Boolean(a.country))}
+                    {allotmentEmailStatus(
+                      a.registrations,
+                      Boolean(a.country),
+                      a.delegates,
+                    )}
                   </td>
                   {statusTab === "pending" && (
                     <td>
@@ -465,7 +465,13 @@ export function AllotmentsManager({
               <p className="admin-toast admin-toast-error">{overrideState.error}</p>
             )}
             <form action={overrideAction} className="admin-form-grid">
-              <input type="hidden" name="registration_id" value={editing.registration_id} />
+              <input type="hidden" name="allotment_id" value={editing.id} />
+              <input
+                type="hidden"
+                name="registration_id"
+                value={editing.registration_id}
+              />
+              <input type="hidden" name="delegate_id" value={editing.delegate_id} />
               <div className="admin-field">
                 <label htmlFor="committee_id">Committee</label>
                 <select
@@ -523,12 +529,12 @@ export function AllotmentsManager({
             <p className="admin-modal-body">
               This will send allotment emails to {pendingEmailCount} recipient
               {pendingEmailCount === 1 ? "" : "s"} who have not received one yet.
-              Individual delegates are emailed directly; delegations are emailed to
-              the head delegate only. Already-emailed recipients are skipped.
+              Each delegate with an email is notified individually. Already-emailed
+              recipients are skipped.
             </p>
             <ul className="admin-allotment-issue-breakdown">
               <li>{pendingDelegateEmails} individual delegate emails</li>
-              <li>{pendingDelegationEmails} delegation head emails</li>
+              <li>{pendingDelegationEmails} delegation member emails</li>
             </ul>
             <form action={issueAction} className="admin-actions">
               <button type="submit" className="btn-admin-primary" disabled={issuing}>

@@ -486,6 +486,26 @@
   gap: 1rem;
 }
 
+.registration-person-prefs {
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.registration-person-prefs:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.registration-person-prefs-title {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
 .registration-committee-prefs-intro {
   margin: 0;
   font-family: var(--font-mono);
@@ -702,8 +722,8 @@ textarea.registration-field {
 
 .registration-delegate-row {
   display: grid;
-  gap: 1rem;
-  padding: 1.25rem 0;
+  gap: 1.25rem;
+  padding: 1.5rem 0;
   border-top: 1px solid var(--line);
 }
 
@@ -711,8 +731,13 @@ textarea.registration-field {
   border-bottom: 1px solid var(--line);
 }
 
+.registration-delegate-row-top {
+  display: grid;
+  gap: 1rem;
+}
+
 @media (min-width: 640px) {
-  .registration-delegate-row {
+  .registration-delegate-row-top {
     grid-template-columns: 1fr 1fr auto;
     align-items: end;
     gap: 1.25rem;
@@ -734,6 +759,12 @@ textarea.registration-field {
 
 .registration-add-member {
   margin-top: 1.25rem;
+}
+
+.registration-review-member-block + .registration-review-member-block {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
 }
 
 /* ── Payment — ink plate with mono details ── */

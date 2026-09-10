@@ -37,7 +37,6 @@ const DELEGATE_STEPS = [
 const DELEGATION_STEPS = [
   { title: "Delegation & head" },
   { title: "Your delegation" },
-  { title: "Committee preferences" },
   { title: "Payment instructions" },
   { title: "Review" },
   { title: "Confirmation" },
@@ -74,8 +73,7 @@ export function RegistrationWizard({
 
   const currentStep = stepIndex + 1;
   const isConfirmation = stepIndex === totalSteps - 1;
-  const isReview =
-    portal === "delegate" ? stepIndex === 3 : stepIndex === 4;
+  const isReview = stepIndex === 3;
 
   useEffect(() => {
     if (!hydrated) return;
@@ -90,22 +88,20 @@ export function RegistrationWizard({
         if (committees.length === 0) {
           return "Committee preferences are unavailable. Please contact the EB.";
         }
-        return validateCommitteePrefs(delegateDraft, committees);
+        return validateCommitteePrefs(delegateDraft, committees, "delegate");
       }
       if (stepIndex === 2) return null;
       return null;
     }
 
     const delegationDraft = draft as DelegationDraft;
-    if (stepIndex === 0) return validateDelegationSchoolHead(delegationDraft);
-    if (stepIndex === 1) return validateDelegationMembers(delegationDraft);
-    if (stepIndex === 2) {
-      if (committees.length === 0) {
-        return "Committee preferences are unavailable. Please contact the EB.";
-      }
-      return validateCommitteePrefs(delegationDraft, committees);
+    if (stepIndex === 0) {
+      return validateDelegationSchoolHead(delegationDraft, committees);
     }
-    if (stepIndex === 3) return null;
+    if (stepIndex === 1) {
+      return validateDelegationMembers(delegationDraft, committees);
+    }
+    if (stepIndex === 2) return null;
     return null;
   };
 
@@ -137,17 +133,29 @@ export function RegistrationWizard({
         formData.set("full_name", delegateDraft.fullName);
         formData.set("email", delegateDraft.email);
         formData.set("school", delegateDraft.school);
+        formData.set("committee_pref_1", delegateDraft.committeePref1);
+        formData.set("committee_pref_2", delegateDraft.committeePref2);
+        formData.set("committee_pref_3", delegateDraft.committeePref3);
       } else {
         const delegationDraft = draft as DelegationDraft;
         formData.set("school", delegationDraft.school);
         formData.set("head_name", delegationDraft.headName);
         formData.set("head_email", delegationDraft.headEmail);
+        formData.set(
+          "head_committee_pref_1",
+          delegationDraft.headCommitteePref1,
+        );
+        formData.set(
+          "head_committee_pref_2",
+          delegationDraft.headCommitteePref2,
+        );
+        formData.set(
+          "head_committee_pref_3",
+          delegationDraft.headCommitteePref3,
+        );
         formData.set("members", JSON.stringify(delegationDraft.members));
       }
 
-      formData.set("committee_pref_1", draft.committeePref1);
-      formData.set("committee_pref_2", draft.committeePref2);
-      formData.set("committee_pref_3", draft.committeePref3);
       formData.set("mun_experience", draft.munExperience);
       formData.set("brand_ambassador_name", draft.brandAmbassadorName);
 
@@ -252,6 +260,7 @@ export function RegistrationWizard({
           {portal === "delegation" && stepIndex === 0 && (
             <SchoolHeadStep
               draft={draft as DelegationDraft}
+              committees={committees}
               onChange={updateDraft}
             />
           )}
@@ -259,13 +268,14 @@ export function RegistrationWizard({
           {portal === "delegation" && stepIndex === 1 && (
             <DelegationMembersStep
               draft={draft as DelegationDraft}
+              committees={committees}
               onChange={updateDraft}
             />
           )}
 
-          {((portal === "delegate" && stepIndex === 1) ||
-            (portal === "delegation" && stepIndex === 2)) && (
+          {portal === "delegate" && stepIndex === 1 && (
             <CommitteePrefsStep
+              portal={portal}
               committees={committees}
               draft={draft}
               onChange={updateDraft}
@@ -273,7 +283,7 @@ export function RegistrationWizard({
           )}
 
           {((portal === "delegate" && stepIndex === 2) ||
-            (portal === "delegation" && stepIndex === 3)) && (
+            (portal === "delegation" && stepIndex === 2)) && (
             <PaymentStep pricing={pricing} fees={fees} />
           )}
 

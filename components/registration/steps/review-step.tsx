@@ -88,6 +88,24 @@ export function ReviewStep({
                   </span>
                 </div>
               )}
+              <div className="registration-review-row">
+                <span className="registration-review-key">Committees</span>
+                <span className="registration-review-value">
+                  {committeeName(committees, delegationDraft.headCommitteePref1)}
+                  {delegationDraft.headCommitteePref2
+                    ? ` · ${committeeName(committees, delegationDraft.headCommitteePref2)}`
+                    : ""}
+                  {delegationDraft.headCommitteePref3
+                    ? ` · ${committeeName(committees, delegationDraft.headCommitteePref3)}`
+                    : ""}
+                </span>
+              </div>
+              <div className="registration-review-row">
+                <span className="registration-review-key">Experience</span>
+                <span className="registration-review-value registration-review-prewrap">
+                  {delegationDraft.munExperience}
+                </span>
+              </div>
             </div>
           </section>
 
@@ -103,9 +121,9 @@ export function ReviewStep({
               </button>
             </div>
             <div className="registration-review-body">
-              <ul className="registration-review-list">
-                {delegationDraft.members.map((member, index) => (
-                  <li key={index} className="registration-review-row">
+              {delegationDraft.members.map((member, index) => (
+                <div key={index} className="registration-review-member-block">
+                  <div className="registration-review-row">
                     <span className="registration-review-key">
                       {String(index + 1).padStart(2, "0")}
                     </span>
@@ -113,9 +131,27 @@ export function ReviewStep({
                       {member.fullName}
                       {member.email ? ` · ${member.email}` : ""}
                     </span>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                  <div className="registration-review-row">
+                    <span className="registration-review-key">Committees</span>
+                    <span className="registration-review-value">
+                      {committeeName(committees, member.committeePref1)}
+                      {member.committeePref2
+                        ? ` · ${committeeName(committees, member.committeePref2)}`
+                        : ""}
+                      {member.committeePref3
+                        ? ` · ${committeeName(committees, member.committeePref3)}`
+                        : ""}
+                    </span>
+                  </div>
+                  <div className="registration-review-row">
+                    <span className="registration-review-key">Experience</span>
+                    <span className="registration-review-value registration-review-prewrap">
+                      {member.munExperience}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         </>
@@ -162,13 +198,14 @@ export function ReviewStep({
         </section>
       )}
 
+      {!isDelegation && (
       <section className="registration-review-section">
         <div className="registration-review-heading">
           <span>Committee preferences</span>
           <button
             type="button"
             className="registration-review-edit"
-            onClick={() => onEdit(isDelegation ? 2 : 1)}
+            onClick={() => onEdit(1)}
           >
             Edit
           </button>
@@ -177,22 +214,22 @@ export function ReviewStep({
           <div className="registration-review-row">
             <span className="registration-review-key">Choice 1</span>
             <span className="registration-review-value">
-              {committeeName(committees, draft.committeePref1)}
+              {committeeName(committees, delegateDraft.committeePref1)}
             </span>
           </div>
-          {draft.committeePref2 && (
+          {delegateDraft.committeePref2 && (
             <div className="registration-review-row">
               <span className="registration-review-key">Choice 2</span>
               <span className="registration-review-value">
-                {committeeName(committees, draft.committeePref2)}
+                {committeeName(committees, delegateDraft.committeePref2)}
               </span>
             </div>
           )}
-          {draft.committeePref3 && (
+          {delegateDraft.committeePref3 && (
             <div className="registration-review-row">
               <span className="registration-review-key">Choice 3</span>
               <span className="registration-review-value">
-                {committeeName(committees, draft.committeePref3)}
+                {committeeName(committees, delegateDraft.committeePref3)}
               </span>
             </div>
           )}
@@ -204,6 +241,7 @@ export function ReviewStep({
           </div>
         </div>
       </section>
+      )}
 
       <section className="registration-review-section">
         <div className="registration-review-heading">
@@ -211,7 +249,7 @@ export function ReviewStep({
           <button
             type="button"
             className="registration-review-edit"
-            onClick={() => onEdit(isDelegation ? 3 : 2)}
+            onClick={() => onEdit(2)}
           >
             Edit
           </button>

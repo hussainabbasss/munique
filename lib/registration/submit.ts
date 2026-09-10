@@ -63,6 +63,10 @@ function parseDelegationDraft(formData: FormData): DelegationDraft {
       members = parsed.map((member) => ({
         fullName: String(member.fullName ?? "").trim(),
         email: String(member.email ?? "").trim(),
+        committeePref1: String(member.committeePref1 ?? ""),
+        committeePref2: String(member.committeePref2 ?? ""),
+        committeePref3: String(member.committeePref3 ?? ""),
+        munExperience: String(member.munExperience ?? "").trim(),
       }));
     }
   } catch {
@@ -75,9 +79,9 @@ function parseDelegationDraft(formData: FormData): DelegationDraft {
     headEmail: String(formData.get("head_email") ?? "").trim().toLowerCase(),
     brandAmbassadorName: String(formData.get("brand_ambassador_name") ?? "").trim(),
     members,
-    committeePref1: String(formData.get("committee_pref_1") ?? ""),
-    committeePref2: String(formData.get("committee_pref_2") ?? ""),
-    committeePref3: String(formData.get("committee_pref_3") ?? ""),
+    headCommitteePref1: String(formData.get("head_committee_pref_1") ?? ""),
+    headCommitteePref2: String(formData.get("head_committee_pref_2") ?? ""),
+    headCommitteePref3: String(formData.get("head_committee_pref_3") ?? ""),
     munExperience: String(formData.get("mun_experience") ?? "").trim(),
   };
 }
@@ -128,6 +132,10 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
     email: string | null;
     is_head_delegate: boolean;
     display_order: number;
+    committee_pref_1: string | null;
+    committee_pref_2: string | null;
+    committee_pref_3: string | null;
+    mun_experience: string;
   }[] = [];
 
   if (portal === "delegate") {
@@ -135,7 +143,7 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
     const aboutError = validateDelegateAbout(draft);
     if (aboutError) return { ok: false, error: aboutError };
 
-    const prefsError = validateCommitteePrefs(draft, committees);
+    const prefsError = validateCommitteePrefs(draft, committees, "delegate");
     if (prefsError) return { ok: false, error: prefsError };
 
     headEmail = draft.email;
@@ -146,6 +154,10 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
         email: draft.email,
         is_head_delegate: true,
         display_order: 0,
+        committee_pref_1: draft.committeePref1 || null,
+        committee_pref_2: draft.committeePref2 || null,
+        committee_pref_3: draft.committeePref3 || null,
+        mun_experience: draft.munExperience,
       },
     ];
 
@@ -212,14 +224,11 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
   }
 
   const draft = parseDelegationDraft(formData);
-  const schoolHeadError = validateDelegationSchoolHead(draft);
+  const schoolHeadError = validateDelegationSchoolHead(draft, committees);
   if (schoolHeadError) return { ok: false, error: schoolHeadError };
 
-  const membersError = validateDelegationMembers(draft);
+  const membersError = validateDelegationMembers(draft, committees);
   if (membersError) return { ok: false, error: membersError };
-
-  const prefsError = validateCommitteePrefs(draft, committees);
-  if (prefsError) return { ok: false, error: prefsError };
 
   headEmail = draft.headEmail;
   school = draft.school;
@@ -230,12 +239,20 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
       email: draft.headEmail,
       is_head_delegate: true,
       display_order: 0,
+      committee_pref_1: draft.headCommitteePref1 || null,
+      committee_pref_2: draft.headCommitteePref2 || null,
+      committee_pref_3: draft.headCommitteePref3 || null,
+      mun_experience: draft.munExperience,
     },
     ...draft.members.map((member, index) => ({
       full_name: member.fullName,
       email: member.email || null,
       is_head_delegate: false,
       display_order: index + 1,
+      committee_pref_1: member.committeePref1 || null,
+      committee_pref_2: member.committeePref2 || null,
+      committee_pref_3: member.committeePref3 || null,
+      mun_experience: member.munExperience,
     })),
   ];
 
@@ -252,9 +269,10 @@ async function submitRegistration(formData: FormData): Promise<SubmitResult> {
       fee_amount: fees.totalFee,
       school,
       head_email: headEmail,
-      committee_pref_1: draft.committeePref1 || null,
-      committee_pref_2: draft.committeePref2 || null,
-      committee_pref_3: draft.committeePref3 || null,
+      // Snapshot head prefs on registration for legacy admin views
+      committee_pref_1: draft.headCommitteePref1 || null,
+      committee_pref_2: draft.headCommitteePref2 || null,
+      committee_pref_3: draft.headCommitteePref3 || null,
       mun_experience: draft.munExperience,
       brand_ambassador_name: draft.brandAmbassadorName || null,
       payment_proof_path: null,

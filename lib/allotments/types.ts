@@ -6,20 +6,17 @@ export type MeritCommittee = {
   country_pool: string[];
 };
 
-export type MeritDelegate = {
+export type MeritDelegateInput = {
+  id: string;
+  registration_id: string;
   full_name: string;
   is_head_delegate: boolean;
-};
-
-export type MeritRegistration = {
-  id: string;
   type: "delegate" | "delegation";
-  mun_experience: string;
   school: string;
+  mun_experience: string;
   committee_pref_1: string | null;
   committee_pref_2: string | null;
   committee_pref_3: string | null;
-  delegates: MeritDelegate[];
 };
 
 export type MeritSuggestion = {
@@ -32,3 +29,10 @@ export type MeritSuggestion = {
 export type MeritResult =
   | ({ ok: true } & MeritSuggestion)
   | { ok: false; reason: string };
+
+/** @deprecated Use MeritDelegateInput — kept for transitional imports */
+export type MeritRegistration = MeritDelegateInput;
+export type MeritDelegate = {
+  full_name: string;
+  is_head_delegate: boolean;
+};

@@ -6,21 +6,25 @@ export const DELEGATION_MIN_DELEGATES = 2;
 export const DELEGATION_MAX_DELEGATES = 15;
 export const PAYMENT_PROOF_MAX_BYTES = 5 * 1024 * 1024;
 
+export type CommitteePrefs = {
+  committeePref1: string;
+  committeePref2: string;
+  committeePref3: string;
+};
+
 export type DelegateMember = {
   fullName: string;
   email: string;
-};
+  munExperience: string;
+} & CommitteePrefs;
 
 export type DelegateDraft = {
   fullName: string;
   email: string;
   school: string;
   brandAmbassadorName: string;
-  committeePref1: string;
-  committeePref2: string;
-  committeePref3: string;
   munExperience: string;
-};
+} & CommitteePrefs;
 
 export type DelegationDraft = {
   school: string;
@@ -28,9 +32,9 @@ export type DelegationDraft = {
   headEmail: string;
   brandAmbassadorName: string;
   members: DelegateMember[];
-  committeePref1: string;
-  committeePref2: string;
-  committeePref3: string;
+  headCommitteePref1: string;
+  headCommitteePref2: string;
+  headCommitteePref3: string;
   munExperience: string;
 };
 
@@ -71,16 +75,31 @@ export function isDelegationDraft(
   return portal === "delegation";
 }
 
+export function emptyCommitteePrefs(): CommitteePrefs {
+  return {
+    committeePref1: "",
+    committeePref2: "",
+    committeePref3: "",
+  };
+}
+
 export function emptyDelegateDraft(): DelegateDraft {
   return {
     fullName: "",
     email: "",
     school: "",
     brandAmbassadorName: "",
-    committeePref1: "",
-    committeePref2: "",
-    committeePref3: "",
     munExperience: "",
+    ...emptyCommitteePrefs(),
+  };
+}
+
+export function emptyDelegateMember(): DelegateMember {
+  return {
+    fullName: "",
+    email: "",
+    munExperience: "",
+    ...emptyCommitteePrefs(),
   };
 }
 
@@ -90,10 +109,10 @@ export function emptyDelegationDraft(): DelegationDraft {
     headName: "",
     headEmail: "",
     brandAmbassadorName: "",
-    members: [{ fullName: "", email: "" }],
-    committeePref1: "",
-    committeePref2: "",
-    committeePref3: "",
+    members: [emptyDelegateMember()],
+    headCommitteePref1: "",
+    headCommitteePref2: "",
+    headCommitteePref3: "",
     munExperience: "",
   };
 }

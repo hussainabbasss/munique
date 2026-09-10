@@ -101,12 +101,17 @@ export type Delegate = {
   email: string | null;
   is_head_delegate: boolean;
   display_order: number;
+  committee_pref_1: string | null;
+  committee_pref_2: string | null;
+  committee_pref_3: string | null;
+  mun_experience: string;
   allotment_email_sent_at: string | null;
 };
 
 export type Allotment = {
   id: string;
   registration_id: string;
+  delegate_id: string;
   merit_score: number | null;
   country: string | null;
   committee_id: string | null;

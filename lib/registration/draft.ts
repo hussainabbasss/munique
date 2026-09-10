@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Portal } from "@/lib/registration/types";
 import {
   emptyDelegateDraft,
+  emptyDelegateMember,
   emptyDelegationDraft,
   type DelegateDraft,
   type DelegationDraft,
@@ -33,14 +34,18 @@ function readDraft(portal: Portal): RegistrationDraft {
     }
 
     const base = emptyDelegationDraft();
+    const delegationParsed = parsed as Partial<DelegationDraft>;
+    const members = Array.isArray(delegationParsed.members)
+      ? delegationParsed.members.map((member) => ({
+          ...emptyDelegateMember(),
+          ...member,
+        }))
+      : base.members;
+
     return {
       ...base,
-      ...parsed,
-      members:
-        Array.isArray((parsed as DelegationDraft).members) &&
-        (parsed as DelegationDraft).members.length > 0
-          ? (parsed as DelegationDraft).members
-          : base.members,
+      ...delegationParsed,
+      members: members.length > 0 ? members : base.members,
     };
   } catch {
     return portal === "delegate" ? emptyDelegateDraft() : emptyDelegationDraft();
