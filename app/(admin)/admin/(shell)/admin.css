@@ -1774,6 +1774,145 @@ a.admin-stat-card:hover {
   color: var(--admin-text-muted);
 }
 
+/* ── Profile dialog ── */
+
+.admin-name-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.admin-name-link:hover,
+.admin-name-link:focus-visible {
+  color: var(--admin-accent);
+}
+
+.admin-profile-modal {
+  top: 50%;
+  max-width: min(56rem, calc(100% - 2rem));
+  max-height: calc(100vh - 3rem);
+  overflow: auto;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.admin-profile-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-profile-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--admin-text-muted);
+}
+
+.admin-profile-modal-body {
+  margin-bottom: 0;
+}
+
+.admin-profile-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.admin-profile-meta > div {
+  min-width: 0;
+}
+
+.admin-profile-meta dt {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--admin-text-muted);
+}
+
+.admin-profile-meta dd {
+  margin: 0;
+  color: var(--admin-text);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.admin-profile-meta-span {
+  grid-column: 1 / -1;
+}
+
+.admin-profile-section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--admin-hairline);
+}
+
+.admin-profile-section-title {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--admin-text);
+}
+
+.admin-profile-table-wrap {
+  margin: 0;
+}
+
+.admin-profile-table {
+  font-size: 0.8125rem;
+}
+
+.admin-profile-table th,
+.admin-profile-table td {
+  vertical-align: top;
+}
+
+.admin-profile-experience {
+  white-space: pre-wrap;
+  max-width: 18rem;
+}
+
+.admin-profile-row-focus,
+.admin-profile-person-focus {
+  background: color-mix(in oklab, var(--admin-accent) 10%, transparent);
+}
+
+.admin-profile-person {
+  padding: 0.75rem;
+  border: 1px solid var(--admin-border);
+}
+
+.admin-profile-person-name {
+  margin: 0 0 0.75rem;
+  color: var(--admin-text);
+}
+
+.admin-profile-footer {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--admin-hairline);
+  display: grid;
+  gap: 0.75rem;
+}
+
 /* ── Misc ── */
 
 .admin-section-divider {

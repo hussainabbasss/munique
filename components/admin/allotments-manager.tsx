@@ -11,6 +11,7 @@ import {
   isAllotmentIssuedTab,
 } from "@/lib/allotments/pending-email";
 import { CountryPicker } from "@/components/admin/country-picker";
+import { RegistrationProfileDialog } from "@/components/admin/registration-profile-dialog";
 
 type DelegateRow = {
   id: string;
@@ -47,6 +48,7 @@ type Committee = {
 
 type AwaitingRow = {
   id: string;
+  registrationUuid: string;
   registration_id: string;
   type: "delegate" | "delegation";
   school: string;
@@ -55,6 +57,11 @@ type AwaitingRow = {
 
 type StatusTab = "pending" | "issued";
 type TypeTab = "delegate" | "delegation";
+
+type ProfileTarget = {
+  registrationUuid: string;
+  focusDelegateId: string | null;
+};
 
 type Props = {
   allotments: AllotmentRow[];
@@ -83,6 +90,9 @@ export function AllotmentsManager({
   const [editCommitteeId, setEditCommitteeId] = useState("");
   const [editCountry, setEditCountry] = useState("");
   const [showIssueModal, setShowIssueModal] = useState(false);
+  const [profileTarget, setProfileTarget] = useState<ProfileTarget | null>(
+    null,
+  );
 
   const [engineState, engineAction, running] = useActionState(
     async () => runMeritEngineAction(),
@@ -167,6 +177,10 @@ export function AllotmentsManager({
     setEditing(row);
     setEditCommitteeId(row.committee_id ?? "");
     setEditCountry(row.country ?? "");
+  };
+
+  const openProfile = (registrationUuid: string, focusDelegateId: string) => {
+    setProfileTarget({ registrationUuid, focusDelegateId });
   };
 
   const displayName = (row: AllotmentRow | AwaitingRow) => {
@@ -288,7 +302,16 @@ export function AllotmentsManager({
           <ul className="admin-allotment-awaiting-list">
             {awaitingByType.slice(0, 8).map((row) => (
               <li key={row.id} className="mono">
-                {row.registration_id} · {displayName(row)}
+                {row.registration_id} ·{" "}
+                <button
+                  type="button"
+                  className="admin-name-link"
+                  onClick={() =>
+                    openProfile(row.registrationUuid, row.delegate.id)
+                  }
+                >
+                  {displayName(row)}
+                </button>
               </li>
             ))}
             {awaitingByType.length > 8 && (
@@ -356,7 +379,15 @@ export function AllotmentsManager({
                 <tr key={a.id}>
                   <td className="mono">{registrationId(a)}</td>
                   <td className="admin-allotment-name" title={displayName(a)}>
-                    {displayName(a)}
+                    <button
+                      type="button"
+                      className="admin-name-link"
+                      onClick={() =>
+                        openProfile(a.registration_id, a.delegate_id)
+                      }
+                    >
+                      {displayName(a)}
+                    </button>
                   </td>
                   <td className="mono">{a.merit_score ?? "—"}</td>
                   <td
@@ -411,6 +442,12 @@ export function AllotmentsManager({
           </tbody>
         </table>
       </div>
+
+      <RegistrationProfileDialog
+        registrationUuid={profileTarget?.registrationUuid ?? null}
+        focusDelegateId={profileTarget?.focusDelegateId ?? null}
+        onClose={() => setProfileTarget(null)}
+      />
 
       {editing && (
         <>

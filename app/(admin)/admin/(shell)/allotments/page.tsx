@@ -58,6 +58,7 @@ export default async function AllotmentsPage() {
     );
     return missing.map((delegate) => ({
       id: delegate.id,
+      registrationUuid: reg.id,
       registration_id: reg.registration_id,
       type: reg.type as "delegate" | "delegation",
       school: reg.school,

@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { confirmPaymentAction } from "@/lib/admin/actions/registrations";
+import { RegistrationProfileDialog } from "@/components/admin/registration-profile-dialog";
 import { formatDate, formatPkr } from "@/lib/utils/format";
 
 type Delegate = {
@@ -81,6 +82,7 @@ function PaymentToggle({
 }
 
 export function RegistrationsStaffBoard({ registrations }: Props) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmState, confirmAction, confirming] = useActionState(
     async (
       _prev: { success?: string; error?: string } | null,
@@ -114,7 +116,15 @@ export function RegistrationsStaffBoard({ registrations }: Props) {
               <div className="staff-reg-main">
                 <div>
                   <p className="staff-reg-id">{reg.registration_id}</p>
-                  <p className="staff-reg-name">{headName(reg)}</p>
+                  <p className="staff-reg-name">
+                    <button
+                      type="button"
+                      className="admin-name-link"
+                      onClick={() => setSelectedId(reg.id)}
+                    >
+                      {headName(reg)}
+                    </button>
+                  </p>
                   <p className="staff-reg-meta">
                     {reg.school} · {reg.type} · {formatPkr(reg.fee_amount)}
                   </p>
@@ -136,6 +146,11 @@ export function RegistrationsStaffBoard({ registrations }: Props) {
           ))}
         </ul>
       )}
+
+      <RegistrationProfileDialog
+        registrationUuid={selectedId}
+        onClose={() => setSelectedId(null)}
+      />
     </>
   );
 }

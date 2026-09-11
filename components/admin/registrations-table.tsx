@@ -6,7 +6,8 @@ import {
   rejectPaymentAction,
   resendRegistrationEmailAction,
 } from "@/lib/admin/actions/registrations";
-import { formatDate, formatPkr } from "@/lib/utils/format";
+import { RegistrationProfileDialog } from "@/components/admin/registration-profile-dialog";
+import { formatDate } from "@/lib/utils/format";
 
 type Delegate = {
   full_name: string;
@@ -50,12 +51,14 @@ function paymentLabel(status: string) {
 }
 
 export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
-  const [selected, setSelected] = useState<RegistrationRow | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = registrations.find((r) => r.id === selectedId) ?? null;
+
   const [confirmState, confirmAction, confirming] = useActionState(
     async (_prev: { success?: string; error?: string } | null, formData: FormData) => {
       const id = String(formData.get("registration_id"));
       const result = await confirmPaymentAction(id);
-      if (result.success) setSelected(null);
+      if (result.success) setSelectedId(null);
       return result;
     },
     null,
@@ -64,7 +67,7 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
     async (_prev: { success?: string; error?: string } | null, formData: FormData) => {
       const id = String(formData.get("registration_id"));
       const result = await rejectPaymentAction(id);
-      if (result.success) setSelected(null);
+      if (result.success) setSelectedId(null);
       return result;
     },
     null,
@@ -120,7 +123,15 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
               registrations.map((r) => (
                 <tr key={r.id}>
                   <td className="mono">{r.registration_id}</td>
-                  <td>{headName(r)}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="admin-name-link"
+                      onClick={() => setSelectedId(r.id)}
+                    >
+                      {headName(r)}
+                    </button>
+                  </td>
                   <td style={{ textTransform: "capitalize" }}>
                     {r.type === "delegate" ? "Delegate" : "Delegation"}
                   </td>
@@ -133,7 +144,7 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
                     <button
                       type="button"
                       className="btn-admin-secondary"
-                      onClick={() => setSelected(r)}
+                      onClick={() => setSelectedId(r.id)}
                     >
                       View
                     </button>
@@ -145,58 +156,36 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
         </table>
       </div>
 
-      {selected && (
-        <>
-          <div
-            className="admin-modal-backdrop"
-            onClick={() => setSelected(null)}
-            aria-hidden
-          />
-          <div className="admin-modal" role="dialog" aria-labelledby="reg-detail-title">
-            <h2 id="reg-detail-title" className="admin-modal-title mono">
-              {selected.registration_id}
-            </h2>
-            <div className="admin-modal-body">
-              <p>
-                <strong>{headName(selected)}</strong> · {selected.head_email}
-              </p>
-              <p>Delegation: {selected.school || "—"}</p>
-              <p>Fee: {formatPkr(selected.fee_amount)}</p>
-              <p>MUN experience: {selected.mun_experience || "—"}</p>
-              {selected.brand_ambassador_name && (
-                <p>Brand Ambassador: {selected.brand_ambassador_name}</p>
-              )}
-              {selected.delegates?.length > 1 && (
-                <div>
-                  <p>
-                    <strong>Delegation members:</strong>
-                  </p>
-                  <ul>
-                    {selected.delegates.map((d) => (
-                      <li key={d.full_name}>
-                        {d.full_name}
-                        {d.is_head_delegate ? " (head)" : ""}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {selected.payment_proof_path && paymentProofUrls[selected.id] && (
-                <p>
-                  <a
-                    href={paymentProofUrls[selected.id]!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View payment proof
-                  </a>
+      <RegistrationProfileDialog
+        registrationUuid={selectedId}
+        onClose={() => setSelectedId(null)}
+        paymentProofUrl={
+          selected ? paymentProofUrls[selected.id] ?? null : null
+        }
+        footer={
+          selected ? (
+            <div className="admin-profile-footer">
+              {confirmState?.success && (
+                <p className="admin-toast admin-toast-success">
+                  {confirmState.success}
                 </p>
               )}
-              <p className="admin-field-hint">
-                Reg email:{" "}
-                {selected.registration_email_sent_at ? "Sent" : "Not sent"} · Payment
-                email: {selected.payment_email_sent_at ? "Sent" : "Not sent"}
-              </p>
+              {confirmState?.error && (
+                <p className="admin-toast admin-toast-error">
+                  {confirmState.error}
+                </p>
+              )}
+              {rejectState?.success && (
+                <p className="admin-toast admin-toast-success">
+                  {rejectState.success}
+                </p>
+              )}
+              {rejectState?.error && (
+                <p className="admin-toast admin-toast-error">
+                  {rejectState.error}
+                </p>
+              )}
+
               <form action={resendAction} className="admin-actions">
                 <input type="hidden" name="registration_id" value={selected.id} />
                 <button
@@ -219,55 +208,47 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
                   </span>
                 )}
               </form>
+
+              {selected.payment_status === "pending" && (
+                <div className="admin-actions">
+                  <form action={confirmAction}>
+                    <input
+                      type="hidden"
+                      name="registration_id"
+                      value={selected.id}
+                    />
+                    <button
+                      type="submit"
+                      className="btn-admin-primary"
+                      disabled={confirming}
+                    >
+                      Confirm payment
+                    </button>
+                  </form>
+                  <form
+                    action={rejectAction}
+                    style={{ display: "flex", gap: "0.5rem" }}
+                  >
+                    <input
+                      type="hidden"
+                      name="registration_id"
+                      value={selected.id}
+                    />
+                    <input name="reason" placeholder="Reject reason (optional)" />
+                    <button
+                      type="submit"
+                      className="btn-admin-secondary btn-admin-danger"
+                      disabled={rejecting}
+                    >
+                      Reject
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
-
-            {confirmState?.success && (
-              <p className="admin-toast admin-toast-success">{confirmState.success}</p>
-            )}
-            {confirmState?.error && (
-              <p className="admin-toast admin-toast-error">{confirmState.error}</p>
-            )}
-            {rejectState?.success && (
-              <p className="admin-toast admin-toast-success">{rejectState.success}</p>
-            )}
-
-            {selected.payment_status === "pending" && (
-              <div className="admin-actions">
-                <form action={confirmAction}>
-                  <input type="hidden" name="registration_id" value={selected.id} />
-                  <button
-                    type="submit"
-                    className="btn-admin-primary"
-                    disabled={confirming}
-                  >
-                    Confirm payment
-                  </button>
-                </form>
-                <form action={rejectAction} style={{ display: "flex", gap: "0.5rem" }}>
-                  <input type="hidden" name="registration_id" value={selected.id} />
-                  <input name="reason" placeholder="Reject reason (optional)" />
-                  <button
-                    type="submit"
-                    className="btn-admin-secondary btn-admin-danger"
-                    disabled={rejecting}
-                  >
-                    Reject
-                  </button>
-                </form>
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="btn-admin-secondary"
-              style={{ marginTop: "1rem" }}
-              onClick={() => setSelected(null)}
-            >
-              Close
-            </button>
-          </div>
-        </>
-      )}
+          ) : null
+        }
+      />
     </>
   );
 }
