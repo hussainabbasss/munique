@@ -228,7 +228,9 @@ export function AllotmentsManager({
         <div className="admin-allotment-toolbar-actions">
           <form action={engineAction}>
             <button type="submit" className="btn-admin-secondary" disabled={running}>
-              {running ? "Running…" : "Run merit engine"}
+              {running
+                ? "Running… (free tier is slow — wait)"
+                : "Run merit engine"}
             </button>
           </form>
           {canIssue && (

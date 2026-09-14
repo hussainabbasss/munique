@@ -84,14 +84,34 @@ export async function runMeritEngineAction() {
   let failed = 0;
   let skipped = 0;
 
+  // Seed taken seats from any existing country so re-runs don't double-assign
+  for (const person of people) {
+    const existing = existingByDelegate.get(person.id);
+    if (existing?.country) {
+      takenCountries.add(existing.country.toLowerCase());
+    }
+  }
+
+  // Free tier ≈ 15 RPM for flash-lite — stay under that by default
+  const paceMs = Number(process.env.GEMINI_PACE_MS ?? "5000");
+  let stoppedEarly = false;
+  let earlyStopReason: string | null = null;
+
   for (const person of people) {
     const existing = existingByDelegate.get(person.id);
     if (existing?.status === "issued" || existing?.is_override) {
       skipped++;
-      if (existing.country) {
-        takenCountries.add(existing.country.toLowerCase());
-      }
       continue;
+    }
+
+    // Already has a suggested seat — don't burn quota re-scoring unless empty
+    if (existing?.country && existing?.status === "pending") {
+      skipped++;
+      continue;
+    }
+
+    if (processed + failed > 0 && paceMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, paceMs));
     }
 
     const result = await suggestAllotment({
@@ -130,19 +150,34 @@ export async function runMeritEngineAction() {
         { onConflict: "delegate_id" },
       );
       failed++;
+
+      if (result.abortBatch || result.quotaExhausted) {
+        stoppedEarly = true;
+        earlyStopReason = result.reason;
+        break;
+      }
     }
   }
 
   revalidatePath("/admin/allotments");
+
+  if (stoppedEarly) {
+    return {
+      error:
+        earlyStopReason ??
+        `Merit engine stopped early after scoring ${processed} delegate${processed === 1 ? "" : "s"}. Remaining people can be set manually via Set allotment.`,
+    };
+  }
+
   const parts = [
     `Scored ${processed} delegates with Gemini`,
     failed > 0 ? `${failed} failed — set manually` : null,
-    skipped > 0 ? `skipped ${skipped} issued/overridden` : null,
+    skipped > 0 ? `skipped ${skipped} issued/overridden/already suggested` : null,
   ].filter(Boolean);
 
   if (processed === 0 && failed > 0) {
     return {
-      error: `Merit engine failed for ${failed} delegate${failed === 1 ? "" : "s"}. Use Adjust to set allotments manually.`,
+      error: `Merit engine failed for ${failed} delegate${failed === 1 ? "" : "s"}. Use Set allotment to assign manually.`,
     };
   }
 

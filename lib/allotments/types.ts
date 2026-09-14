@@ -28,7 +28,7 @@ export type MeritSuggestion = {
 
 export type MeritResult =
   | ({ ok: true } & MeritSuggestion)
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; quotaExhausted?: boolean; abortBatch?: boolean };
 
 /** @deprecated Use MeritDelegateInput — kept for transitional imports */
 export type MeritRegistration = MeritDelegateInput;

@@ -12,8 +12,19 @@ import type {
   MeritSuggestion,
 } from "@/lib/allotments/types";
 
+/** Current free-tier friendly default; override with GEMINI_MODEL. */
+const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
+const MAX_RETRIES = 3;
+/** Free tier is ~15 RPM — allow waiting out a full minute window. */
+const RETRY_FALLBACK_MS = 55_000;
+const MAX_RETRY_DELAY_MS = 65_000;
+
 function clampScore(value: number) {
   return Math.round(Math.min(100, Math.max(0, value)));
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function committeesWithPool(committees: MeritCommittee[]) {
@@ -65,6 +76,58 @@ function validateSuggestion(
   return parsed;
 }
 
+function isQuotaError(message: string) {
+  return (
+    message.includes("429") ||
+    /quota|rate.?limit|too many requests/i.test(message)
+  );
+}
+
+/** Daily free-tier caps won't clear with short retries — stop the batch. */
+export function isDailyQuotaExhausted(message: string) {
+  return (
+    /GenerateRequestsPerDayPerProjectPerModel|RequestsPerDayPerProject/i.test(
+      message,
+    ) && /quota|exceeded|429/i.test(message)
+  );
+}
+
+/** Per-minute free-tier — wait and retry; do not abort the whole run. */
+export function isMinuteQuotaExceeded(message: string) {
+  return (
+    /GenerateRequestsPerMinutePerProjectPerModel|RequestsPerMinute/i.test(
+      message,
+    ) && /quota|exceeded|429/i.test(message)
+  );
+}
+
+/** Model removed / wrong id — retrying every delegate just hangs the UI. */
+export function isModelUnavailable(message: string) {
+  return (
+    /\[404|404 Not Found|no longer available|not found for API version|is not found/i.test(
+      message,
+    ) || /Please update your code to use models\//i.test(message)
+  );
+}
+
+function parseRetryDelayMs(message: string): number | null {
+  const retryInfo = message.match(/retryDelay["\s:]+"?(\d+(?:\.\d+)?)s/i);
+  if (retryInfo) {
+    return Math.min(
+      Math.ceil(Number(retryInfo[1]) * 1000) + 1500,
+      MAX_RETRY_DELAY_MS,
+    );
+  }
+  const pleaseRetry = message.match(/Please retry in ([\d.]+)s/i);
+  if (pleaseRetry) {
+    return Math.min(
+      Math.ceil(Number(pleaseRetry[1]) * 1000) + 1500,
+      MAX_RETRY_DELAY_MS,
+    );
+  }
+  return null;
+}
+
 async function suggestWithGemini(
   person: MeritDelegateInput,
   committees: MeritCommittee[],
@@ -79,7 +142,7 @@ async function suggestWithGemini(
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  const modelName = process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
   const model = genAI.getGenerativeModel({
     model: modelName,
     generationConfig: { responseMimeType: "application/json" },
@@ -136,36 +199,64 @@ Return JSON only:
   "reasoning": "<one sentence>"
 }`;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    const parsed = parseGeminiJson(text);
-    if (!parsed) {
-      return {
-        suggestion: null,
-        detail: "Gemini returned invalid JSON.",
-      };
-    }
+  let lastDetail: string | undefined;
 
-    const validated = validateSuggestion(parsed, committees);
-    if (!validated) {
-      return {
-        suggestion: null,
-        detail:
-          "Gemini suggestion failed validation (committee, pool, or P5 rules).",
-      };
-    }
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      const parsed = parseGeminiJson(text);
+      if (!parsed) {
+        return {
+          suggestion: null,
+          detail: "Gemini returned invalid JSON.",
+        };
+      }
 
-    return { suggestion: validated };
-  } catch (error) {
-    console.error("[merit-engine] Gemini failed", error);
-    const message =
-      error instanceof Error ? error.message : "Unknown Gemini error";
-    return {
-      suggestion: null,
-      detail: message,
-    };
+      const validated = validateSuggestion(parsed, committees);
+      if (!validated) {
+        return {
+          suggestion: null,
+          detail:
+            "Gemini suggestion failed validation (committee, pool, or P5 rules).",
+        };
+      }
+
+      return { suggestion: validated };
+    } catch (error) {
+      console.error("[merit-engine] Gemini failed", error);
+      const message =
+        error instanceof Error ? error.message : "Unknown Gemini error";
+      lastDetail = message;
+
+      // Permanent: wrong/retired model — do not retry or continue the batch
+      if (isModelUnavailable(message)) {
+        break;
+      }
+
+      // Daily quota — retries won't help until tomorrow
+      if (isDailyQuotaExhausted(message)) {
+        break;
+      }
+
+      if (!isQuotaError(message) || attempt === MAX_RETRIES) {
+        break;
+      }
+
+      const delay =
+        parseRetryDelayMs(message) ??
+        (isMinuteQuotaExceeded(message) ? RETRY_FALLBACK_MS : 10_000);
+      console.warn(
+        `[merit-engine] Rate limited — retry ${attempt + 1}/${MAX_RETRIES} in ${Math.round(delay / 1000)}s`,
+      );
+      await sleep(delay);
+    }
   }
+
+  return {
+    suggestion: null,
+    detail: lastDetail,
+  };
 }
 
 export async function suggestAllotment(params: {
@@ -191,9 +282,16 @@ export async function suggestAllotment(params: {
   );
 
   if (!suggestion) {
+    const modelGone = detail ? isModelUnavailable(detail) : false;
+    const dailyGone = detail ? isDailyQuotaExhausted(detail) : false;
     return {
       ok: false,
-      reason: `Model failed — set allotment manually.${detail ? ` (${detail})` : ""}`,
+      reason: modelGone
+        ? `Gemini model unavailable — set GEMINI_MODEL in .env.local (suggested: gemini-3.5-flash-lite).${detail ? ` (${detail})` : ""}`
+        : `Model failed — set allotment manually.${detail ? ` (${detail})` : ""}`,
+      // Only stop the whole run for permanent problems (not per-minute 429)
+      abortBatch: modelGone || dailyGone,
+      quotaExhausted: dailyGone,
     };
   }
 
