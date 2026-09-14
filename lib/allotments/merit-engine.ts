@@ -76,6 +76,51 @@ function validateSuggestion(
   return parsed;
 }
 
+/**
+ * Keep first preference unless it is a high-difficulty committee.
+ * Low/no experience alone must not push beginners (e.g. PNA/PAC first pref)
+ * to pref_2 or pref_3 — Gemini sometimes does that incorrectly.
+ */
+function honorEasyFirstPreference(
+  suggestion: MeritSuggestion,
+  person: MeritDelegateInput,
+  committees: MeritCommittee[],
+  takenCountries: Set<string>,
+): MeritSuggestion {
+  const pref1Id = person.committee_pref_1;
+  if (!pref1Id || suggestion.committee_id === pref1Id) {
+    return suggestion;
+  }
+
+  const pref1 = committees.find((c) => c.id === pref1Id);
+  if (!pref1 || pref1.difficulty_tier === "high") {
+    return suggestion;
+  }
+
+  const pool = resolveCommitteePool(pref1.country_pool).filter(
+    (country) =>
+      !isP5Country(country) && !takenCountries.has(country.toLowerCase()),
+  );
+
+  if (!pool.length) {
+    return suggestion;
+  }
+
+  // Keep Gemini's country if it is still valid in pref_1; otherwise take a quieter seat
+  const country = isCountryInPool(suggestion.country, pool)
+    ? suggestion.country
+    : pool[pool.length - 1];
+
+  return {
+    ...suggestion,
+    committee_id: pref1.id,
+    country,
+    reasoning: suggestion.reasoning
+      ? `${suggestion.reasoning} Kept first preference (${pref1.name}) — not high difficulty.`
+      : `Assigned to first preference (${pref1.name}).`,
+  };
+}
+
 function isQuotaError(message: string) {
   return (
     message.includes("429") ||
@@ -165,6 +210,13 @@ async function suggestWithGemini(
 
   const takenList = [...takenCountries].join(", ") || "none";
 
+  function describePref(prefId: string | null, rank: 1 | 2 | 3) {
+    if (!prefId) return `pref_${rank}: none`;
+    const committee = committees.find((c) => c.id === prefId);
+    if (!committee) return `pref_${rank}: ${prefId}`;
+    return `pref_${rank}: ${committee.name} (id: ${committee.id}, difficulty: ${committee.difficulty_tier})`;
+  }
+
   const prompt = `You are the allotment advisor for Munique 2026, a Model UN conference.
 
 Score this individual delegate and suggest ONE committee and ONE country/seat assignment.
@@ -172,11 +224,12 @@ Score this individual delegate and suggest ONE committee and ONE country/seat as
 RULES (strict):
 1. NEVER assign P5 countries (${P5_COUNTRIES.join(", ")}). Those are reserved for manual EB assignment only.
 2. Choose country/seat ONLY from the selected committee's allotment_pool (listed per committee below). Never use a seat outside that committee's pool.
-3. More experienced delegates should receive seats MORE central/relevant to the committee agenda.
-4. Less experienced delegates should receive seats still plausible but less agenda-central.
-5. Prefer the delegate's committee preferences when merit supports the difficulty tier (pref 1 = ambitious, pref 3 = fallback).
-6. Avoid seats already assigned in this batch when possible: ${takenList}
-7. Allot this person independently — even if they registered with a school delegation.
+3. Committee preference order is the primary rule — honor pref_1 whenever its allotment_pool still has seats.
+4. Low / no MUN experience does NOT mean demote from pref_1. Beginners who chose an easy or beginner-friendly first preference (difficulty low, or committees like PNA / PAC) MUST stay in pref_1. Do not push them to pref_2 or pref_3 just because they are new.
+5. Only move to pref_2 (then pref_3) when pref_1 is genuinely unsuitable: difficulty is high AND experience is clearly too weak for that committee, OR pref_1 has no remaining seats in its pool. Never demote from a low or medium difficulty first preference because of low/no experience.
+6. Within the chosen committee, more experienced delegates get seats more central to the agenda; less experienced get still-plausible but less agenda-central seats. That is a seat choice inside the committee — never a reason to change committees.
+7. Avoid seats already assigned in this batch when possible: ${takenList}
+8. Allot this person independently — even if they registered with a school delegation.
 
 Delegate:
 - name: ${person.full_name}
@@ -184,9 +237,9 @@ Delegate:
 - registration_type: ${person.type}
 - school/group: ${person.school}
 - mun_experience: ${person.mun_experience}
-- committee_pref_1: ${person.committee_pref_1 ?? "none"}
-- committee_pref_2: ${person.committee_pref_2 ?? "none"}
-- committee_pref_3: ${person.committee_pref_3 ?? "none"}
+- ${describePref(person.committee_pref_1, 1)}
+- ${describePref(person.committee_pref_2, 2)}
+- ${describePref(person.committee_pref_3, 3)}
 
 Published committees:
 ${committeeBlock}
@@ -222,7 +275,14 @@ Return JSON only:
         };
       }
 
-      return { suggestion: validated };
+      return {
+        suggestion: honorEasyFirstPreference(
+          validated,
+          person,
+          committees,
+          takenCountries,
+        ),
+      };
     } catch (error) {
       console.error("[merit-engine] Gemini failed", error);
       const message =
