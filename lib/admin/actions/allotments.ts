@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { seatKey } from "@/lib/allotments/countries";
 import { suggestAllotment } from "@/lib/allotments/merit-engine";
 import type { MeritDelegateInput } from "@/lib/allotments/types";
 import { sendAllotmentIssued } from "@/lib/email/send";
@@ -69,26 +70,32 @@ export async function runMeritEngineAction() {
     return { error: "No delegates found on confirmed registrations." };
   }
 
-  const delegateIds = people.map((p) => p.id);
-  const { data: existingAllotments } = await supabase
+  // Every allotment, not just this batch — a failed lookup here would make the
+  // engine re-score (and overwrite) issued and overridden allotments.
+  const { data: existingAllotments, error: existingError } = await supabase
     .from("allotments")
-    .select("delegate_id, status, is_override, country")
-    .in("delegate_id", delegateIds);
+    .select("delegate_id, committee_id, status, is_override, country");
+
+  if (existingError) {
+    return {
+      error: `Could not load existing allotments — nothing was changed. (${existingError.message})`,
+    };
+  }
 
   const existingByDelegate = new Map(
     (existingAllotments ?? []).map((row) => [row.delegate_id, row]),
   );
 
-  const takenCountries = new Set<string>();
+  // Seats are per committee: Pakistan in one committee leaves Pakistan free elsewhere
+  const takenSeats = new Set<string>();
   let processed = 0;
   let failed = 0;
   let skipped = 0;
 
-  // Seed taken seats from any existing country so re-runs don't double-assign
-  for (const person of people) {
-    const existing = existingByDelegate.get(person.id);
-    if (existing?.country) {
-      takenCountries.add(existing.country.toLowerCase());
+  // Seed from every held seat so re-runs don't double-assign within a committee
+  for (const row of existingAllotments ?? []) {
+    if (row.country && row.committee_id) {
+      takenSeats.add(seatKey(row.committee_id, row.country));
     }
   }
 
@@ -117,11 +124,11 @@ export async function runMeritEngineAction() {
     const result = await suggestAllotment({
       person,
       committees,
-      takenCountries,
+      takenSeats,
     });
 
     if (result.ok) {
-      await supabase.from("allotments").upsert(
+      const { error: saveError } = await supabase.from("allotments").upsert(
         {
           registration_id: person.registration_id,
           delegate_id: person.id,
@@ -134,6 +141,17 @@ export async function runMeritEngineAction() {
         },
         { onConflict: "delegate_id" },
       );
+
+      if (saveError) {
+        // Not saved, so the seat is not actually held
+        takenSeats.delete(seatKey(result.committee_id, result.country));
+        console.error("[allotments] could not save suggestion", {
+          delegateId: person.id,
+          error: saveError.message,
+        });
+        failed++;
+        continue;
+      }
       processed++;
     } else {
       await supabase.from("allotments").upsert(
@@ -160,6 +178,7 @@ export async function runMeritEngineAction() {
   }
 
   revalidatePath("/admin/allotments");
+  revalidatePath("/admin/countries");
 
   if (stoppedEarly) {
     return {
@@ -198,7 +217,36 @@ export async function saveAllotmentOverrideAction(formData: FormData) {
     return { error: "Missing delegate for allotment override." };
   }
 
+  if (!country || !committeeId) {
+    return { error: "Choose both a committee and a country." };
+  }
+
   const supabase = await createClient();
+
+  // A seat is one country in one committee — block a second holder
+  const { data: committeeSeats, error: seatsError } = await supabase
+    .from("allotments")
+    .select("delegate_id, country, delegates(full_name)")
+    .eq("committee_id", committeeId)
+    .neq("delegate_id", delegateId)
+    .not("country", "is", null);
+
+  if (seatsError) return { error: seatsError.message };
+
+  const wanted = seatKey(committeeId, country);
+  const holder = (committeeSeats ?? []).find(
+    (row) => row.country && seatKey(committeeId, row.country) === wanted,
+  );
+
+  if (holder) {
+    const holderName =
+      (holder.delegates as unknown as { full_name: string } | null)
+        ?.full_name ?? "another delegate";
+    return {
+      error: `${country} is already taken in this committee by ${holderName}. Pick another country or move them first.`,
+    };
+  }
+
   const payload = {
     registration_id: registrationId,
     delegate_id: delegateId,
@@ -218,6 +266,7 @@ export async function saveAllotmentOverrideAction(formData: FormData) {
   if (error) return { error: error.message };
 
   revalidatePath("/admin/allotments");
+  revalidatePath("/admin/countries");
   return { success: "Allotment updated" };
 }
 
@@ -322,6 +371,7 @@ export async function issueAllotmentsAction() {
   }
 
   revalidatePath("/admin/allotments");
+  revalidatePath("/admin/countries");
   return {
     success:
       allotmentsNewlyIssued > 0

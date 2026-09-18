@@ -222,6 +222,27 @@ export function AllotmentsManager({
   const selectedCommitteePool =
     committeeById.get(editCommitteeId)?.country_pool ?? [];
 
+  // Seats are per committee — only other delegates in the chosen committee block a country
+  const takenInSelectedCommittee = useMemo(() => {
+    const taken = new Map<string, string>();
+    if (!editCommitteeId) return taken;
+
+    for (const row of allotments) {
+      if (
+        row.committee_id !== editCommitteeId ||
+        !row.country ||
+        row.delegate_id === editing?.delegate_id
+      ) {
+        continue;
+      }
+      taken.set(
+        row.country.trim().toLowerCase(),
+        row.delegates?.full_name ?? "another delegate",
+      );
+    }
+    return taken;
+  }, [allotments, editCommitteeId, editing]);
+
   return (
     <>
       <div className="admin-allotment-toolbar">
@@ -537,6 +558,7 @@ export function AllotmentsManager({
                   id="country"
                   value={editCountry}
                   committeePool={selectedCommitteePool}
+                  takenBy={takenInSelectedCommittee}
                   onChange={setEditCountry}
                   required
                 />

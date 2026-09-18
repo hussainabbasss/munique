@@ -1,9 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
-  isCountryInPool,
+  freeCommitteeSeats,
   isP5Country,
   P5_COUNTRIES,
   resolveCommitteePool,
+  seatKey,
 } from "@/lib/allotments/countries";
 import type {
   MeritCommittee,
@@ -27,9 +28,21 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function committeesWithPool(committees: MeritCommittee[]) {
+function sameCountry(a: string, b: string) {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+function freeSeats(committee: MeritCommittee, takenSeats: ReadonlySet<string>) {
+  return freeCommitteeSeats(committee.id, committee.country_pool, takenSeats);
+}
+
+/** Committees the engine can still place someone in — at least one free non-P5 seat. */
+function committeesWithFreeSeats(
+  committees: MeritCommittee[],
+  takenSeats: ReadonlySet<string>,
+) {
   return committees.filter(
-    (committee) => resolveCommitteePool(committee.country_pool).length > 0,
+    (committee) => freeSeats(committee, takenSeats).length > 0,
   );
 }
 
@@ -60,20 +73,56 @@ function parseGeminiJson(text: string): MeritSuggestion | null {
   }
 }
 
-function validateSuggestion(
+/**
+ * Check Gemini's pick against committee, pool and P5 rules, then make sure the
+ * seat is still free in that committee. Seats are per committee — the same
+ * country can be taken in one committee and free in another.
+ */
+function resolveSeat(
   parsed: MeritSuggestion,
+  person: MeritDelegateInput,
   committees: MeritCommittee[],
-) {
+  takenSeats: ReadonlySet<string>,
+): MeritSuggestion | null {
   const committee = committees.find((c) => c.id === parsed.committee_id);
   if (!committee) return null;
   if (isP5Country(parsed.country)) return null;
 
-  const pool = resolveCommitteePool(committee.country_pool);
-  if (!pool.length) return null;
+  // Store the pool's spelling so pickers and the country matrix match exactly
+  const poolCountry = resolveCommitteePool(committee.country_pool).find(
+    (entry) => sameCountry(entry, parsed.country),
+  );
+  if (!poolCountry) return null;
 
-  if (!isCountryInPool(parsed.country, pool)) return null;
+  if (!takenSeats.has(seatKey(committee.id, poolCountry))) {
+    return { ...parsed, country: poolCountry };
+  }
 
-  return parsed;
+  // Seat already held — another free seat in the same committee, then preferences
+  const fallbackOrder = [
+    committee.id,
+    person.committee_pref_1,
+    person.committee_pref_2,
+    person.committee_pref_3,
+    ...committees.map((c) => c.id),
+  ];
+
+  for (const committeeId of fallbackOrder) {
+    const candidate = committees.find((c) => c.id === committeeId);
+    if (!candidate) continue;
+    const free = freeSeats(candidate, takenSeats);
+    if (!free.length) continue;
+
+    const note = `${poolCountry} was already taken in ${committee.name} — moved to a free seat.`;
+    return {
+      ...parsed,
+      committee_id: candidate.id,
+      country: free[free.length - 1],
+      reasoning: parsed.reasoning ? `${parsed.reasoning} ${note}` : note,
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -85,7 +134,7 @@ function honorEasyFirstPreference(
   suggestion: MeritSuggestion,
   person: MeritDelegateInput,
   committees: MeritCommittee[],
-  takenCountries: Set<string>,
+  takenSeats: ReadonlySet<string>,
 ): MeritSuggestion {
   const pref1Id = person.committee_pref_1;
   if (!pref1Id || suggestion.committee_id === pref1Id) {
@@ -97,19 +146,16 @@ function honorEasyFirstPreference(
     return suggestion;
   }
 
-  const pool = resolveCommitteePool(pref1.country_pool).filter(
-    (country) =>
-      !isP5Country(country) && !takenCountries.has(country.toLowerCase()),
-  );
+  const pool = freeSeats(pref1, takenSeats);
 
   if (!pool.length) {
     return suggestion;
   }
 
-  // Keep Gemini's country if it is still valid in pref_1; otherwise take a quieter seat
-  const country = isCountryInPool(suggestion.country, pool)
-    ? suggestion.country
-    : pool[pool.length - 1];
+  // Keep Gemini's country if it is still free in pref_1; otherwise take a quieter seat
+  const country =
+    pool.find((entry) => sameCountry(entry, suggestion.country)) ??
+    pool[pool.length - 1];
 
   return {
     ...suggestion,
@@ -176,7 +222,7 @@ function parseRetryDelayMs(message: string): number | null {
 async function suggestWithGemini(
   person: MeritDelegateInput,
   committees: MeritCommittee[],
-  takenCountries: Set<string>,
+  takenSeats: ReadonlySet<string>,
 ): Promise<{ suggestion: MeritSuggestion | null; detail?: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -194,21 +240,18 @@ async function suggestWithGemini(
   });
 
   const committeeBlock = committees
-    .filter((c) => resolveCommitteePool(c.country_pool).length > 0)
     .map((c) => {
-      const pool = resolveCommitteePool(c.country_pool);
-      return `- id: ${c.id}\n  name: ${c.name}\n  difficulty: ${c.difficulty_tier}\n  agenda: ${c.agenda.slice(0, 500)}\n  allotment_pool: ${pool.join(", ")}`;
+      const available = freeSeats(c, takenSeats);
+      return `- id: ${c.id}\n  name: ${c.name}\n  difficulty: ${c.difficulty_tier}\n  agenda: ${c.agenda.slice(0, 500)}\n  available_seats: ${available.join(", ")}`;
     })
     .join("\n");
 
   if (!committeeBlock) {
     return {
       suggestion: null,
-      detail: "No committees with an allotment pool.",
+      detail: "No committees with free seats left.",
     };
   }
-
-  const takenList = [...takenCountries].join(", ") || "none";
 
   function describePref(prefId: string | null, rank: 1 | 2 | 3) {
     if (!prefId) return `pref_${rank}: none`;
@@ -223,12 +266,12 @@ Score this individual delegate and suggest ONE committee and ONE country/seat as
 
 RULES (strict):
 1. NEVER assign P5 countries (${P5_COUNTRIES.join(", ")}). Those are reserved for manual EB assignment only.
-2. Choose country/seat ONLY from the selected committee's allotment_pool (listed per committee below). Never use a seat outside that committee's pool.
-3. Committee preference order is the primary rule — honor pref_1 whenever its allotment_pool still has seats.
+2. Choose country/seat ONLY from the selected committee's available_seats (listed per committee below). Never use a seat outside that committee's list.
+3. Committee preference order is the primary rule — honor pref_1 whenever it is listed below (every listed committee still has seats).
 4. Low / no MUN experience does NOT mean demote from pref_1. Beginners who chose an easy or beginner-friendly first preference (difficulty low, or committees like PNA / PAC) MUST stay in pref_1. Do not push them to pref_2 or pref_3 just because they are new.
-5. Only move to pref_2 (then pref_3) when pref_1 is genuinely unsuitable: difficulty is high AND experience is clearly too weak for that committee, OR pref_1 has no remaining seats in its pool. Never demote from a low or medium difficulty first preference because of low/no experience.
+5. Only move to pref_2 (then pref_3) when pref_1 is genuinely unsuitable: difficulty is high AND experience is clearly too weak for that committee, OR pref_1 is not listed below (it is full). Never demote from a low or medium difficulty first preference because of low/no experience.
 6. Within the chosen committee, more experienced delegates get seats more central to the agenda; less experienced get still-plausible but less agenda-central seats. That is a seat choice inside the committee — never a reason to change committees.
-7. Avoid seats already assigned in this batch when possible: ${takenList}
+7. Seats are per committee: the same country can be free in one committee and taken in another. Taken seats are already removed from each available_seats list — a committee missing from the list is full.
 8. Allot this person independently — even if they registered with a school delegation.
 
 Delegate:
@@ -248,7 +291,7 @@ Return JSON only:
 {
   "merit_score": <integer 0-100>,
   "committee_id": "<uuid from list>",
-  "country": "<from that committee's allotment_pool, never P5>",
+  "country": "<from that committee's available_seats, never P5>",
   "reasoning": "<one sentence>"
 }`;
 
@@ -266,7 +309,7 @@ Return JSON only:
         };
       }
 
-      const validated = validateSuggestion(parsed, committees);
+      const validated = resolveSeat(parsed, person, committees, takenSeats);
       if (!validated) {
         return {
           suggestion: null,
@@ -280,7 +323,7 @@ Return JSON only:
           validated,
           person,
           committees,
-          takenCountries,
+          takenSeats,
         ),
       };
     } catch (error) {
@@ -322,23 +365,26 @@ Return JSON only:
 export async function suggestAllotment(params: {
   person: MeritDelegateInput;
   committees: MeritCommittee[];
-  takenCountries: Set<string>;
+  /** Seats already held, keyed by seatKey(committeeId, country). Added to on success. */
+  takenSeats: Set<string>;
 }): Promise<MeritResult> {
-  const { person, committees, takenCountries } = params;
+  const { person, committees, takenSeats } = params;
 
-  const eligible = committeesWithPool(committees);
+  const eligible = committeesWithFreeSeats(committees, takenSeats);
   if (!eligible.length) {
     return {
       ok: false,
       reason:
-        "No published committees with an allotment pool — add allotments on each committee first.",
+        "No free seats left in any published committee — add countries to a committee pool or set this allotment manually.",
+      // Nobody after this person can be seated either
+      abortBatch: true,
     };
   }
 
   const { suggestion, detail } = await suggestWithGemini(
     person,
     eligible,
-    takenCountries,
+    takenSeats,
   );
 
   if (!suggestion) {
@@ -355,7 +401,7 @@ export async function suggestAllotment(params: {
     };
   }
 
-  takenCountries.add(suggestion.country.toLowerCase());
+  takenSeats.add(seatKey(suggestion.committee_id, suggestion.country));
   return {
     ok: true,
     ...suggestion,

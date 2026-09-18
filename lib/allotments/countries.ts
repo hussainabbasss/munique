@@ -93,5 +93,25 @@ export function resolveCommitteePool(pool: string[] | null | undefined) {
 
 export function isCountryInPool(country: string, pool: readonly string[]) {
   const normalized = country.trim().toLowerCase();
-  return pool.some((entry) => entry.toLowerCase() === normalized);
+  return pool.some((entry) => entry.trim().toLowerCase() === normalized);
+}
+
+/** Seat identity — a country is only taken within its own committee. */
+export function seatKey(committeeId: string, country: string) {
+  return `${committeeId}:${country.trim().toLowerCase()}`;
+}
+
+/** Pool seats the merit engine may still hand out in a committee (never P5). */
+export function freeCommitteeSeats(
+  committeeId: string,
+  pool: string[] | null | undefined,
+  takenSeats: ReadonlySet<string>,
+) {
+  const seen = new Set<string>();
+  return resolveCommitteePool(pool).filter((country) => {
+    const key = seatKey(committeeId, country);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return !isP5Country(country) && !takenSeats.has(key);
+  });
 }

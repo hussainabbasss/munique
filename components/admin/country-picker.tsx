@@ -8,6 +8,8 @@ type Props = {
   value?: string;
   defaultValue?: string;
   committeePool?: string[];
+  /** Lowercased country → holder name, for seats already taken in this committee. */
+  takenBy?: ReadonlyMap<string, string>;
   required?: boolean;
   onChange?: (value: string) => void;
 };
@@ -18,10 +20,20 @@ export function CountryPicker({
   value,
   defaultValue = "",
   committeePool = [],
+  takenBy,
   required = false,
   onChange,
 }: Props) {
   const isControlled = value !== undefined;
+
+  const renderOption = (country: string) => {
+    const holder = takenBy?.get(country.trim().toLowerCase());
+    return (
+      <option key={country} value={country} disabled={Boolean(holder)}>
+        {holder ? `${country} — taken by ${holder}` : country}
+      </option>
+    );
+  };
 
   return (
     <select
@@ -35,19 +47,11 @@ export function CountryPicker({
       <option value="">Select country…</option>
       {committeePool.length > 0 && (
         <optgroup label="Committee pool">
-          {committeePool.map((country) => (
-            <option key={country} value={country}>
-              {country}
-            </option>
-          ))}
+          {committeePool.map(renderOption)}
         </optgroup>
       )}
       <optgroup label="P5 — EB manual only">
-        {P5_COUNTRIES.map((country) => (
-          <option key={country} value={country}>
-            {country}
-          </option>
-        ))}
+        {P5_COUNTRIES.map(renderOption)}
       </optgroup>
     </select>
   );
