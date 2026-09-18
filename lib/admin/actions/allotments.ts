@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { seatKey } from "@/lib/allotments/countries";
 import { suggestAllotment } from "@/lib/allotments/merit-engine";
 import type { MeritDelegateInput } from "@/lib/allotments/types";
-import { sendAllotmentIssued } from "@/lib/email/send";
+import { sendAllotmentChanged, sendAllotmentIssued } from "@/lib/email/send";
 import { requireAdminRole, requireAdminUser } from "@/lib/admin/helpers";
 
 export async function runMeritEngineAction() {
@@ -203,6 +203,37 @@ export async function runMeritEngineAction() {
   return { success: `${parts.join(". ")}.` };
 }
 
+/**
+ * A seat is one country in one committee. Returns an error message when
+ * someone other than `delegateId` already holds it, otherwise null.
+ */
+async function seatTakenError(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  committeeId: string,
+  country: string,
+  delegateId: string,
+): Promise<string | null> {
+  const { data: committeeSeats, error } = await supabase
+    .from("allotments")
+    .select("delegate_id, country, delegates(full_name)")
+    .eq("committee_id", committeeId)
+    .neq("delegate_id", delegateId)
+    .not("country", "is", null);
+
+  if (error) return error.message;
+
+  const wanted = seatKey(committeeId, country);
+  const holder = (committeeSeats ?? []).find(
+    (row) => row.country && seatKey(committeeId, row.country) === wanted,
+  );
+  if (!holder) return null;
+
+  const holderName =
+    (holder.delegates as unknown as { full_name: string } | null)?.full_name ??
+    "another delegate";
+  return `${country} is already taken in this committee by ${holderName}. Pick another country or move them first.`;
+}
+
 export async function saveAllotmentOverrideAction(formData: FormData) {
   await requireAdminUser();
 
@@ -223,29 +254,13 @@ export async function saveAllotmentOverrideAction(formData: FormData) {
 
   const supabase = await createClient();
 
-  // A seat is one country in one committee — block a second holder
-  const { data: committeeSeats, error: seatsError } = await supabase
-    .from("allotments")
-    .select("delegate_id, country, delegates(full_name)")
-    .eq("committee_id", committeeId)
-    .neq("delegate_id", delegateId)
-    .not("country", "is", null);
-
-  if (seatsError) return { error: seatsError.message };
-
-  const wanted = seatKey(committeeId, country);
-  const holder = (committeeSeats ?? []).find(
-    (row) => row.country && seatKey(committeeId, row.country) === wanted,
+  const seatError = await seatTakenError(
+    supabase,
+    committeeId,
+    country,
+    delegateId,
   );
-
-  if (holder) {
-    const holderName =
-      (holder.delegates as unknown as { full_name: string } | null)
-        ?.full_name ?? "another delegate";
-    return {
-      error: `${country} is already taken in this committee by ${holderName}. Pick another country or move them first.`,
-    };
-  }
+  if (seatError) return { error: seatError };
 
   const payload = {
     registration_id: registrationId,
@@ -268,6 +283,157 @@ export async function saveAllotmentOverrideAction(formData: FormData) {
   revalidatePath("/admin/allotments");
   revalidatePath("/admin/countries");
   return { success: "Allotment updated" };
+}
+
+/**
+ * Change the committee/country of an allotment that was already issued, then
+ * email the delegate the new allotment. There is one allotment row per
+ * delegate, so moving it frees their previous seat in that committee's pool.
+ */
+export async function changeIssuedAllotmentAction(formData: FormData) {
+  const admin = await requireAdminRole();
+
+  const allotmentId = String(formData.get("allotment_id") ?? "");
+  const country = String(formData.get("country") ?? "").trim();
+  const committeeId = String(formData.get("committee_id") ?? "");
+  const overrideNote = String(formData.get("override_note") ?? "") || null;
+
+  if (!allotmentId) return { error: "Missing allotment." };
+  if (!country || !committeeId) {
+    return { error: "Choose both a committee and a country." };
+  }
+  // The email goes out immediately — the dialog must have been confirmed
+  if (formData.get("confirm_resend") !== "yes") {
+    return { error: "Confirm the change before the email is resent." };
+  }
+
+  const supabase = await createClient();
+
+  const [{ data: current, error: currentError }, { data: newCommittee }] =
+    await Promise.all([
+      supabase
+        .from("allotments")
+        .select(
+          "id, delegate_id, country, committee_id, status, registrations(payment_status), delegates(id, email, full_name), committees(name)",
+        )
+        .eq("id", allotmentId)
+        .maybeSingle(),
+      supabase
+        .from("committees")
+        .select("id, name")
+        .eq("id", committeeId)
+        .maybeSingle(),
+    ]);
+
+  if (currentError) return { error: currentError.message };
+  if (!current) return { error: "Allotment not found." };
+  if (!newCommittee) return { error: "Committee not found." };
+
+  if (current.status !== "issued") {
+    return { error: "This allotment has not been issued yet — use Adjust." };
+  }
+
+  const reg = current.registrations as unknown as {
+    payment_status: string;
+  } | null;
+  if (reg?.payment_status !== "confirmed") {
+    return { error: "Registration is not confirmed — no email can be sent." };
+  }
+
+  const previousCountry = current.country ?? "";
+  const unchanged =
+    current.committee_id === committeeId &&
+    seatKey(committeeId, previousCountry) === seatKey(committeeId, country);
+  if (unchanged) {
+    return { error: "That is already this delegate's allotment." };
+  }
+
+  const seatError = await seatTakenError(
+    supabase,
+    committeeId,
+    country,
+    current.delegate_id,
+  );
+  if (seatError) return { error: seatError };
+
+  const delegate = current.delegates as unknown as {
+    id: string;
+    email: string | null;
+    full_name: string;
+  } | null;
+  const previousCommittee =
+    (current.committees as unknown as { name: string } | null)?.name ?? "TBD";
+
+  const now = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from("allotments")
+    .update({
+      country,
+      committee_id: committeeId,
+      is_override: true,
+      override_note: overrideNote,
+      issued_at: now,
+      issued_by: admin.id,
+      updated_at: now,
+    })
+    .eq("id", allotmentId);
+
+  if (updateError) return { error: updateError.message };
+
+  revalidatePath("/admin/allotments");
+  revalidatePath("/admin/countries");
+
+  const summary = `${delegate?.full_name ?? "Delegate"} moved to ${newCommittee.name} — ${country}. ${previousCommittee} — ${previousCountry || "previous seat"} is free again.`;
+
+  if (!delegate?.email) {
+    return {
+      success: `${summary} No email on file, so the delegate was not notified.`,
+    };
+  }
+
+  const result = await sendAllotmentChanged({
+    to: delegate.email,
+    committee: newCommittee.name,
+    country,
+    previousCommittee,
+    previousCountry: previousCountry || "TBD",
+  });
+
+  if (!result.ok) {
+    // Mark the email as unsent so "Issue allotments" picks this delegate up again
+    await Promise.all([
+      supabase
+        .from("delegates")
+        .update({ allotment_email_sent_at: null })
+        .eq("id", delegate.id),
+      supabase
+        .from("allotments")
+        .update({ allotment_email_sent_at: null })
+        .eq("id", allotmentId),
+    ]);
+    console.error("[allotments] change email failed", {
+      delegateId: delegate.id,
+      error: result.error,
+    });
+    return {
+      // The allotment itself was changed — only the email is outstanding
+      saved: true,
+      error: `${summary} The email failed to send (${result.error}) — it is queued under Issue allotments to retry.`,
+    };
+  }
+
+  await Promise.all([
+    supabase
+      .from("delegates")
+      .update({ allotment_email_sent_at: now })
+      .eq("id", delegate.id),
+    supabase
+      .from("allotments")
+      .update({ allotment_email_sent_at: now })
+      .eq("id", allotmentId),
+  ]);
+
+  return { success: `${summary} Email resent to ${delegate.email}.` };
 }
 
 export async function issueAllotmentsAction() {

@@ -148,6 +148,29 @@ export async function sendAllotmentIssued(params: {
   });
 }
 
+/** Sent when an already-issued allotment is changed — replaces the earlier email. */
+export async function sendAllotmentChanged(params: {
+  to: string;
+  committee: string;
+  country: string;
+  previousCommittee: string;
+  previousCountry: string;
+}): Promise<EmailResult> {
+  const html = baseHtml(`
+    <p>Your allotment has been updated.</p>
+    <p>Committee: <strong>${escapeHtml(params.committee)}</strong><br>
+    Country: <strong>${escapeHtml(params.country)}</strong></p>
+    <p>This replaces your earlier allotment (${escapeHtml(params.previousCommittee)} — ${escapeHtml(params.previousCountry)}), which is no longer valid.</p>
+  `);
+
+  return sendEmail({
+    kind: "sendAllotmentChanged",
+    to: params.to,
+    subject: "Your allotment has changed — Munique 2026",
+    html,
+  });
+}
+
 export async function sendDelegationAllotmentIssued(params: {
   to: string;
   groupName: string;

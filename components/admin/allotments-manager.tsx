@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import {
+  changeIssuedAllotmentAction,
   issueAllotmentsAction,
   runMeritEngineAction,
   saveAllotmentOverrideAction,
@@ -93,6 +94,10 @@ export function AllotmentsManager({
   const [profileTarget, setProfileTarget] = useState<ProfileTarget | null>(
     null,
   );
+  // Changing an already-issued allotment: edit first, then confirm the resend
+  const [changing, setChanging] = useState<AllotmentRow | null>(null);
+  const [changeStep, setChangeStep] = useState<"edit" | "confirm">("edit");
+  const [changeNote, setChangeNote] = useState("");
 
   const [engineState, engineAction, running] = useActionState(
     async () => runMeritEngineAction(),
@@ -110,6 +115,25 @@ export function AllotmentsManager({
     async (_prev: { success?: string; error?: string } | null, formData: FormData) => {
       const result = await saveAllotmentOverrideAction(formData);
       if (result.success) setEditing(null);
+      return result;
+    },
+    null,
+  );
+
+  const [changeState, changeAction, changingSaving] = useActionState(
+    async (
+      _prev: { success?: string; error?: string; saved?: boolean } | null,
+      formData: FormData,
+    ) => {
+      const result: { success?: string; error?: string; saved?: boolean } =
+        await changeIssuedAllotmentAction(formData);
+      // Close once the allotment is saved (even if only the email failed);
+      // otherwise go back so the admin can fix the form
+      if (result.success || result.saved) {
+        setChanging(null);
+      } else {
+        setChangeStep("edit");
+      }
       return result;
     },
     null,
@@ -179,6 +203,14 @@ export function AllotmentsManager({
     setEditCountry(row.country ?? "");
   };
 
+  const openChange = (row: AllotmentRow) => {
+    setChanging(row);
+    setChangeStep("edit");
+    setChangeNote("");
+    setEditCommitteeId(row.committee_id ?? "");
+    setEditCountry(row.country ?? "");
+  };
+
   const openProfile = (registrationUuid: string, focusDelegateId: string) => {
     setProfileTarget({ registrationUuid, focusDelegateId });
   };
@@ -227,11 +259,14 @@ export function AllotmentsManager({
     const taken = new Map<string, string>();
     if (!editCommitteeId) return taken;
 
+    // The delegate being edited never blocks their own seat
+    const ownDelegateId = (editing ?? changing)?.delegate_id;
+
     for (const row of allotments) {
       if (
         row.committee_id !== editCommitteeId ||
         !row.country ||
-        row.delegate_id === editing?.delegate_id
+        row.delegate_id === ownDelegateId
       ) {
         continue;
       }
@@ -241,7 +276,16 @@ export function AllotmentsManager({
       );
     }
     return taken;
-  }, [allotments, editCommitteeId, editing]);
+  }, [allotments, editCommitteeId, editing, changing]);
+
+  // Issued allotments can only be changed by whoever may issue (the email resends)
+  const showActions = statusTab === "pending" || canIssue;
+
+  const changeIsDifferent =
+    changing !== null &&
+    (editCommitteeId !== (changing.committee_id ?? "") ||
+      editCountry.trim().toLowerCase() !==
+        (changing.country ?? "").trim().toLowerCase());
 
   return (
     <>
@@ -310,6 +354,12 @@ export function AllotmentsManager({
       )}
       {issueState?.error && (
         <p className="admin-toast admin-toast-error">{issueState.error}</p>
+      )}
+      {changeState?.success && (
+        <p className="admin-toast admin-toast-success">{changeState.success}</p>
+      )}
+      {changeState?.error && !changing && (
+        <p className="admin-toast admin-toast-error">{changeState.error}</p>
       )}
 
       {awaitingByType.length > 0 && (
@@ -382,14 +432,14 @@ export function AllotmentsManager({
               <th>Country</th>
               <th>Status</th>
               <th>Email</th>
-              {statusTab === "pending" && <th>Actions</th>}
+              {showActions && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {visibleRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={statusTab === "pending" ? 8 : 7}
+                  colSpan={showActions ? 8 : 7}
                   className="admin-empty"
                 >
                   {statusTab === "pending"
@@ -456,6 +506,17 @@ export function AllotmentsManager({
                         onClick={() => openEdit(a)}
                       >
                         {needsManualAllotment(a) ? "Set allotment" : "Adjust"}
+                      </button>
+                    </td>
+                  )}
+                  {statusTab === "issued" && canIssue && (
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-admin-secondary"
+                        onClick={() => openChange(a)}
+                      >
+                        Change allotment
                       </button>
                     </td>
                   )}
@@ -574,6 +635,178 @@ export function AllotmentsManager({
               >
                 {saving ? "Saving…" : "Save allotment"}
               </button>
+            </form>
+          </div>
+        </>
+      )}
+
+      {changing && (
+        <>
+          <div
+            className="admin-modal-backdrop"
+            onClick={() => !changingSaving && setChanging(null)}
+          />
+          <div
+            className="admin-modal admin-allotment-modal"
+            role={changeStep === "confirm" ? "alertdialog" : "dialog"}
+          >
+            <div className="admin-allotment-modal-head">
+              <h2 className="admin-modal-title">
+                {changeStep === "confirm"
+                  ? "Confirm change and resend email"
+                  : "Change issued allotment"}
+              </h2>
+              <button
+                type="button"
+                className="btn-admin-secondary"
+                disabled={changingSaving}
+                onClick={() => setChanging(null)}
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="admin-allotment-review-card">
+              <p className="mono admin-allotment-review-id">
+                {changing.registrations?.registration_id}
+              </p>
+              <p className="admin-allotment-review-name">
+                {displayName(changing)}
+              </p>
+              <dl className="admin-allotment-review-meta">
+                <div>
+                  <dt>Current committee</dt>
+                  <dd>{changing.committees?.name ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Current country</dt>
+                  <dd>{changing.country ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{changing.delegates?.email ?? "No email"}</dd>
+                </div>
+              </dl>
+            </div>
+
+            {changeState?.error && changeStep === "edit" && (
+              <p className="admin-toast admin-toast-error">{changeState.error}</p>
+            )}
+
+            <form action={changeAction} className="admin-form-grid">
+              <input type="hidden" name="allotment_id" value={changing.id} />
+
+              {changeStep === "edit" ? (
+                <>
+                  <div className="admin-field">
+                    <label htmlFor="change_committee_id">New committee</label>
+                    <select
+                      id="change_committee_id"
+                      value={editCommitteeId}
+                      onChange={(event) => {
+                        setEditCommitteeId(event.target.value);
+                        setEditCountry("");
+                      }}
+                      required
+                    >
+                      <option value="">Select committee</option>
+                      {committees.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="admin-field">
+                    <label htmlFor="change_country">New country</label>
+                    <CountryPicker
+                      id="change_country"
+                      name="change_country_picker"
+                      value={editCountry}
+                      committeePool={selectedCommitteePool}
+                      takenBy={takenInSelectedCommittee}
+                      onChange={setEditCountry}
+                      required
+                    />
+                  </div>
+                  <div className="admin-field">
+                    <label htmlFor="change_note">Reason / note</label>
+                    <textarea
+                      id="change_note"
+                      rows={3}
+                      value={changeNote}
+                      onChange={(event) => setChangeNote(event.target.value)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-admin-primary"
+                    disabled={!editCommitteeId || !editCountry || !changeIsDifferent}
+                    title={
+                      !changeIsDifferent
+                        ? "Pick a different committee or country"
+                        : undefined
+                    }
+                    onClick={() => setChangeStep("confirm")}
+                  >
+                    Review change
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input type="hidden" name="committee_id" value={editCommitteeId} />
+                  <input type="hidden" name="country" value={editCountry} />
+                  <input type="hidden" name="override_note" value={changeNote} />
+                  <input type="hidden" name="confirm_resend" value="yes" />
+
+                  <p className="admin-modal-body">
+                    {changing.delegates?.full_name ?? "This delegate"} will move
+                    from{" "}
+                    <strong>
+                      {changing.committees?.name ?? "—"} — {changing.country ?? "—"}
+                    </strong>{" "}
+                    to{" "}
+                    <strong>
+                      {committeeById.get(editCommitteeId)?.name ?? "—"} —{" "}
+                      {editCountry}
+                    </strong>
+                    .
+                  </p>
+                  <ul className="admin-allotment-issue-breakdown">
+                    <li>
+                      {changing.delegates?.email
+                        ? `A new allotment email is sent to ${changing.delegates.email} straight away, saying it replaces the earlier one.`
+                        : "This delegate has no email on file, so nobody is notified."}
+                    </li>
+                    <li>
+                      {changing.country ?? "Their previous country"} becomes free
+                      again in {changing.committees?.name ?? "the previous committee"}.
+                    </li>
+                  </ul>
+
+                  <div className="admin-actions">
+                    <button
+                      type="submit"
+                      className="btn-admin-primary btn-admin-weighty"
+                      disabled={changingSaving}
+                    >
+                      {changingSaving
+                        ? "Saving and sending…"
+                        : changing.delegates?.email
+                          ? "Confirm and resend email"
+                          : "Confirm change"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-admin-secondary"
+                      disabled={changingSaving}
+                      onClick={() => setChangeStep("edit")}
+                    >
+                      Back
+                    </button>
+                  </div>
+                </>
+              )}
             </form>
           </div>
         </>
