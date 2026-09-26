@@ -71,7 +71,8 @@ export async function middleware(request: NextRequest) {
     if (adminUser.role === "registration_staff") {
       const allowed =
         pathname === "/admin/registrations" ||
-        pathname.startsWith("/admin/registrations/");
+        pathname.startsWith("/admin/registrations/") ||
+        pathname === "/admin/attendance";
       if (!allowed) {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/admin/registrations";

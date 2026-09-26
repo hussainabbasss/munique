@@ -734,6 +734,65 @@ html[data-admin-boot-theme="dark"] .admin-theme-root:not([data-admin-theme-ready
   padding-right: 0.25rem;
 }
 
+/* ── Gate attendance ── */
+
+.attendance-stats {
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 1rem;
+}
+
+.attendance-stat-total {
+  font-size: 1rem;
+  color: var(--admin-text-muted);
+}
+
+.attendance-filters input {
+  flex: 1 1 16rem;
+}
+
+.attendance-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+@media (min-width: 768px) {
+  .attendance-main {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.attendance-info {
+  min-width: 0;
+}
+
+.attendance-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.attendance-toggle {
+  min-height: 2.75rem;
+  min-width: 9.5rem;
+}
+
+.attendance-toggle.staff-payment-toggle-on {
+  cursor: pointer;
+}
+
+.attendance-toggle:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.attendance-toggle:focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: 2px;
+}
+
 /* ── Metrics strip (overview) ── */
 
 .admin-metrics {
