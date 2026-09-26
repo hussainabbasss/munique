@@ -2,12 +2,24 @@
 
 import { useMemo, useState } from "react";
 import { RegistrationProfileDialog } from "@/components/admin/registration-profile-dialog";
+import {
+  AttendanceCheck,
+  AttendanceNotice,
+  useAttendanceMarks,
+} from "@/components/admin/attendance-kit";
+import {
+  ATTENDANCE_DAYS,
+  dayKey,
+  dayLabel,
+  type AttendanceDay,
+  type AttendanceMarks,
+} from "@/lib/attendance/days";
 import type {
   CommitteeMatrix,
   SeatHolder,
 } from "@/lib/allotments/country-matrix";
 
-type SeatFilter = "all" | "taken" | "left";
+type SeatFilter = "all" | "taken" | "left" | "absent";
 
 type ProfileTarget = {
   registrationUuid: string;
@@ -16,16 +28,63 @@ type ProfileTarget = {
 
 type Props = {
   committees: CommitteeMatrix[];
+  attendance: Record<string, AttendanceMarks>;
+  initialDay: AttendanceDay;
+  initialAttendanceOn: boolean;
 };
 
 const OVERVIEW = "overview";
 
-export function CountryMatrix({ committees }: Props) {
+function seatedDelegateIds(committee: CommitteeMatrix) {
+  return [
+    ...new Set(
+      committee.seats.flatMap((seat) =>
+        seat.holders.map((holder) => holder.delegateId),
+      ),
+    ),
+  ];
+}
+
+export function CountryMatrix({
+  committees,
+  attendance,
+  initialDay,
+  initialAttendanceOn,
+}: Props) {
   const [activeId, setActiveId] = useState<string>(OVERVIEW);
   const [seatFilter, setSeatFilter] = useState<SeatFilter>("all");
   const [search, setSearch] = useState("");
   const [profileTarget, setProfileTarget] = useState<ProfileTarget | null>(
     null,
+  );
+  const [attendanceOn, setAttendanceOn] = useState(initialAttendanceOn);
+  const [day, setDay] = useState<AttendanceDay>(initialDay);
+  const { marks, marksFor, isPending, toggle, notice, undo } =
+    useAttendanceMarks(attendance);
+
+  const setAttendance = (on: boolean) => {
+    setAttendanceOn(on);
+    if (!on && seatFilter === "absent") setSeatFilter("all");
+    // Keep the mode in the URL so a refresh (or a shared link) stays in attendance mode.
+    const url = new URL(window.location.href);
+    if (on) url.searchParams.set("attendance", "on");
+    else url.searchParams.delete("attendance");
+    window.history.replaceState(null, "", url);
+  };
+
+  const isIn = (delegateId: string) => Boolean(marks[delegateId]?.[dayKey(day)]);
+
+  const presence = (committee: CommitteeMatrix) => {
+    const ids = seatedDelegateIds(committee);
+    return { present: ids.filter(isIn).length, seated: ids.length };
+  };
+
+  const totalPresence = committees.reduce(
+    (sum, committee) => {
+      const { present, seated } = presence(committee);
+      return { present: sum.present + present, seated: sum.seated + seated };
+    },
+    { present: 0, seated: 0 },
   );
 
   const totals = useMemo(
@@ -51,6 +110,14 @@ export function CountryMatrix({ committees }: Props) {
       const isTaken = seat.holders.length > 0;
       if (seatFilter === "taken" && !isTaken) return false;
       if (seatFilter === "left" && isTaken) return false;
+      if (
+        seatFilter === "absent" &&
+        !seat.holders.some(
+          (holder) => !marks[holder.delegateId]?.[dayKey(day)],
+        )
+      ) {
+        return false;
+      }
       if (!term) return true;
       return (
         seat.country.toLowerCase().includes(term) ||
@@ -62,7 +129,7 @@ export function CountryMatrix({ committees }: Props) {
         )
       );
     });
-  }, [active, seatFilter, search]);
+  }, [active, seatFilter, search, marks, day]);
 
   const holderLabel = (holder: SeatHolder) =>
     holder.type === "delegation" && holder.isHeadDelegate
@@ -79,9 +146,47 @@ export function CountryMatrix({ committees }: Props) {
     return <p className="admin-empty">No committees yet — add committees first.</p>;
   }
 
+  const activePresence = active ? presence(active) : null;
+  const absentSeats = active
+    ? active.seats.filter((seat) =>
+        seat.holders.some((holder) => !isIn(holder.delegateId)),
+      ).length
+    : 0;
+
   return (
-    <>
-      <div className="admin-stat-grid admin-country-matrix-stats">
+    <div className="register">
+      <div className="admin-country-matrix-toolbar">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={attendanceOn}
+          className="admin-theme-toggle admin-country-matrix-switch"
+          onClick={() => setAttendance(!attendanceOn)}
+        >
+          <span className="admin-theme-toggle-track" aria-hidden="true">
+            <span className="admin-theme-toggle-thumb" />
+          </span>
+          Attendance
+        </button>
+        {attendanceOn && (
+          <div className="register-segment" role="group" aria-label="Conference day">
+            {ATTENDANCE_DAYS.map((option) => (
+              <button
+                key={option.day}
+                type="button"
+                aria-pressed={day === option.day}
+                onClick={() => setDay(option.day)}
+              >
+                {option.label} · {option.date}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div
+        className={`admin-stat-grid admin-country-matrix-stats${attendanceOn ? " admin-country-matrix-stats-attendance" : ""}`}
+      >
         <div className="admin-stat-card admin-stat-card-static">
           <p className="admin-stat-label">Pool countries</p>
           <p className="admin-stat-value">{totals.total}</p>
@@ -95,6 +200,18 @@ export function CountryMatrix({ committees }: Props) {
           <p className="admin-stat-label">Left</p>
           <p className="admin-stat-value">{totals.left}</p>
         </div>
+        {attendanceOn && (
+          <div className="admin-stat-card admin-stat-card-static admin-stat-card-revenue">
+            <p className="admin-stat-label">Present · {dayLabel(day)}</p>
+            <p className="admin-stat-value">
+              {totalPresence.present}
+              <span className="attendance-stat-total">/{totalPresence.seated}</span>
+            </p>
+            <p className="admin-stat-sub">
+              {totalPresence.seated - totalPresence.present} seated delegates not in
+            </p>
+          </div>
+        )}
       </div>
 
       <div
@@ -135,6 +252,7 @@ export function CountryMatrix({ committees }: Props) {
                 <th>Taken</th>
                 <th>Left</th>
                 <th>Filled</th>
+                {attendanceOn && <th>Present · {dayLabel(day)}</th>}
               </tr>
             </thead>
             <tbody>
@@ -185,6 +303,13 @@ export function CountryMatrix({ committees }: Props) {
                         <span className="admin-field-hint">No pool set</span>
                       )}
                     </td>
+                    {attendanceOn && (
+                      <td className="mono">
+                        {presence(committee).seated
+                          ? `${presence(committee).present}/${presence(committee).seated}`
+                          : "—"}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -198,6 +323,13 @@ export function CountryMatrix({ committees }: Props) {
               <strong>{active.left}</strong> of {active.total} countries left ·{" "}
               {active.taken} taken
               {active.offPool > 0 && ` · ${active.offPool} assigned off pool`}
+              {attendanceOn && activePresence && (
+                <>
+                  {" · "}
+                  <strong>{activePresence.present}</strong>/{activePresence.seated}{" "}
+                  present on {dayLabel(day)}
+                </>
+              )}
             </p>
             <div className="admin-filters admin-country-matrix-filters">
               <div
@@ -210,6 +342,9 @@ export function CountryMatrix({ committees }: Props) {
                     ["all", `All (${active.seats.length})`],
                     ["taken", `Taken (${active.taken + active.offPool})`],
                     ["left", `Left (${active.left})`],
+                    ...(attendanceOn
+                      ? ([["absent", `Not in (${absentSeats})`]] as const)
+                      : []),
                   ] as const
                 ).map(([value, label]) => (
                   <button
@@ -234,8 +369,12 @@ export function CountryMatrix({ committees }: Props) {
             </div>
           </div>
 
+          {attendanceOn && <AttendanceNotice notice={notice} onUndo={undo} />}
+
           <div className="admin-table-wrap">
-            <table className="admin-table">
+            <table
+              className={`admin-table${attendanceOn ? " admin-country-matrix-attend" : ""}`}
+            >
               <thead>
                 <tr>
                   <th>Country</th>
@@ -243,13 +382,24 @@ export function CountryMatrix({ committees }: Props) {
                   <th>Taken by</th>
                   <th>ID</th>
                   <th>School</th>
-                  <th>Allotment</th>
+                  {attendanceOn ? (
+                    ATTENDANCE_DAYS.map((option) => (
+                      <th
+                        key={option.day}
+                        className={`register-col-day${option.day === day ? " register-col-active" : ""}`}
+                      >
+                        {option.label}
+                      </th>
+                    ))
+                  ) : (
+                    <th>Allotment</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {visibleSeats.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="admin-empty">
+                    <td colSpan={attendanceOn ? 7 : 6} className="admin-empty">
                       {active.seats.length === 0
                         ? "No country pool set for this committee — add one under Committees."
                         : "No countries match this filter."}
@@ -319,17 +469,40 @@ export function CountryMatrix({ committees }: Props) {
                               ))
                             : "—"}
                         </td>
-                        <td>
-                          {isTaken
-                            ? seat.holders.map((holder) => (
-                                <div key={holder.allotmentId}>
-                                  {holder.status === "issued"
-                                    ? "Issued"
-                                    : "Pending"}
-                                </div>
-                              ))
-                            : "—"}
-                        </td>
+                        {attendanceOn ? (
+                          ATTENDANCE_DAYS.map((option) => (
+                            <td
+                              key={option.day}
+                              className={`register-col-day${option.day === day ? " register-col-active" : ""}`}
+                            >
+                              {isTaken
+                                ? seat.holders.map((holder) => (
+                                    <AttendanceCheck
+                                      key={holder.allotmentId}
+                                      markedAt={marksFor(holder.delegateId)[dayKey(option.day)]}
+                                      busy={isPending(holder.delegateId, option.day)}
+                                      label={`${holder.fullName} (${seat.country}) present on ${option.label}`}
+                                      onToggle={() =>
+                                        toggle(holder.delegateId, holder.fullName, option.day)
+                                      }
+                                    />
+                                  ))
+                                : "—"}
+                            </td>
+                          ))
+                        ) : (
+                          <td>
+                            {isTaken
+                              ? seat.holders.map((holder) => (
+                                  <div key={holder.allotmentId}>
+                                    {holder.status === "issued"
+                                      ? "Issued"
+                                      : "Pending"}
+                                  </div>
+                                ))
+                              : "—"}
+                          </td>
+                        )}
                       </tr>
                     );
                   })
@@ -345,6 +518,6 @@ export function CountryMatrix({ committees }: Props) {
         focusDelegateId={profileTarget?.focusDelegateId ?? null}
         onClose={() => setProfileTarget(null)}
       />
-    </>
+    </div>
   );
 }

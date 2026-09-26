@@ -1,7 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { setAttendanceAction } from "@/lib/admin/actions/attendance";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  AttendanceCheck,
+  AttendanceNotice,
+  useAttendanceMarks,
+} from "@/components/admin/attendance-kit";
+import {
+  ATTENDANCE_DAYS,
+  dayKey,
+  dayLabel,
+  formatMarkTime,
+  type AttendanceDay,
+  type AttendanceMarks,
+} from "@/lib/attendance/days";
 
 export type AttendanceDelegate = {
   id: string;
@@ -12,19 +24,11 @@ export type AttendanceDelegate = {
   school: string;
   country: string | null;
   committee: string | null;
-  /** ISO time the delegate was marked present, or null if absent. */
-  day1: string | null;
-  day2: string | null;
+  marks: AttendanceMarks;
 };
 
-type Day = 1 | 2;
 type View = "all" | "outstanding" | "present";
 type Grouping = "name" | "school";
-
-const DAYS: { day: Day; label: string; date: string }[] = [
-  { day: 1, label: "Day 1", date: "Sat 17 Oct" },
-  { day: 2, label: "Day 2", date: "Sun 18 Oct" },
-];
 
 const VIEWS: { value: View; label: string }[] = [
   { value: "all", label: "All" },
@@ -32,40 +36,31 @@ const VIEWS: { value: View; label: string }[] = [
   { value: "present", label: "Present" },
 ];
 
-const timeFormat = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-  timeZone: "Asia/Karachi",
-});
-
-function dayKey(day: Day) {
-  return day === 1 ? "day1" : "day2";
-}
-
 function seatLabel(row: AttendanceDelegate) {
   return [row.country, row.committee].filter(Boolean).join(" · ");
 }
 
 type Props = {
   delegates: AttendanceDelegate[];
-  initialDay: Day;
+  initialDay: AttendanceDay;
 };
 
 export function AttendanceBoard({ delegates, initialDay }: Props) {
-  const [rows, setRows] = useState(delegates);
-  const [activeDay, setActiveDay] = useState<Day>(initialDay);
+  const [activeDay, setActiveDay] = useState<AttendanceDay>(initialDay);
   const [view, setView] = useState<View>("all");
   const [grouping, setGrouping] = useState<Grouping>("name");
   const [query, setQuery] = useState("");
-  const [pending, setPending] = useState<Set<string>>(new Set());
-  const [notice, setNotice] = useState<{
-    tone: "ok" | "error";
-    text: string;
-    undo?: { id: string; day: Day };
-  } | null>(null);
-  const [, startTransition] = useTransition();
   const searchRef = useRef<HTMLInputElement>(null);
+
+  const attendance = useAttendanceMarks(
+    useMemo(
+      () => Object.fromEntries(delegates.map((row) => [row.id, row.marks])),
+      [delegates],
+    ),
+  );
+  const { marksFor, isPending, toggle, notice, setNotice, undo } = attendance;
+  const isIn = (row: AttendanceDelegate, day: AttendanceDay) =>
+    Boolean(marksFor(row.id)[dayKey(day)]);
 
   // Stable register numbers — alphabetical order, like the printed sheet.
   const serials = useMemo(
@@ -74,20 +69,19 @@ export function AttendanceBoard({ delegates, initialDay }: Props) {
   );
   const digits = String(delegates.length).length;
 
-  const tally = useMemo(
-    () => ({
-      1: rows.filter((row) => row.day1).length,
-      2: rows.filter((row) => row.day2).length,
-    }),
-    [rows],
-  );
+  const tally = useMemo(() => {
+    const count = (day: AttendanceDay) =>
+      delegates.filter((row) => attendance.marks[row.id]?.[dayKey(day)]).length;
+    return { 1: count(1), 2: count(2) };
+  }, [delegates, attendance.marks]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const key = dayKey(activeDay);
-    return rows.filter((row) => {
-      if (view === "outstanding" && row[key]) return false;
-      if (view === "present" && !row[key]) return false;
+    return delegates.filter((row) => {
+      const present = Boolean(attendance.marks[row.id]?.[key]);
+      if (view === "outstanding" && present) return false;
+      if (view === "present" && !present) return false;
       if (!q) return true;
       return [
         row.fullName,
@@ -97,7 +91,7 @@ export function AttendanceBoard({ delegates, initialDay }: Props) {
         row.committee ?? "",
       ].some((value) => value.toLowerCase().includes(q));
     });
-  }, [rows, query, view, activeDay]);
+  }, [delegates, attendance.marks, query, view, activeDay]);
 
   const groups = useMemo(() => {
     if (grouping === "name") return [{ title: null, rows: visible }];
@@ -128,55 +122,6 @@ export function AttendanceBoard({ delegates, initialDay }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function applyMark(id: string, day: Day, value: string | null) {
-    const key = dayKey(day);
-    setRows((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, [key]: value } : row)),
-    );
-  }
-
-  function toggle(delegate: AttendanceDelegate, day: Day) {
-    const key = dayKey(day);
-    const pendingKey = `${delegate.id}:${day}`;
-    if (pending.has(pendingKey)) return;
-
-    const previous = delegate[key];
-    const present = !previous;
-    const dayLabel = DAYS[day - 1].label;
-
-    setPending((prev) => new Set(prev).add(pendingKey));
-    applyMark(delegate.id, day, present ? new Date().toISOString() : null);
-    setNotice({
-      tone: "ok",
-      text: `${delegate.fullName} marked ${present ? "present" : "absent"} · ${dayLabel}`,
-      undo: { id: delegate.id, day },
-    });
-
-    startTransition(async () => {
-      // A thrown action (e.g. an expired session) must roll back, not crash the sheet.
-      const result = await setAttendanceAction(delegate.id, day, present).catch(
-        () => ({
-          error: "not saved — check your connection or sign in again",
-          markedAt: undefined,
-        }),
-      );
-      if (result.error) {
-        applyMark(delegate.id, day, previous);
-        setNotice({
-          tone: "error",
-          text: `Couldn’t update ${delegate.fullName}: ${result.error}`,
-        });
-      } else if (result.markedAt !== undefined) {
-        applyMark(delegate.id, day, result.markedAt);
-      }
-      setPending((prev) => {
-        const copy = new Set(prev);
-        copy.delete(pendingKey);
-        return copy;
-      });
-    });
-  }
-
   function onSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
       setQuery("");
@@ -186,25 +131,25 @@ export function AttendanceBoard({ delegates, initialDay }: Props) {
     if (event.key === "Enter" && query.trim() && visible.length === 1) {
       event.preventDefault();
       const [match] = visible;
-      const markedAt = match[dayKey(activeDay)];
+      const markedAt = marksFor(match.id)[dayKey(activeDay)];
       if (markedAt) {
         setNotice({
           tone: "ok",
-          text: `${match.fullName} already in · ${DAYS[activeDay - 1].label} at ${timeFormat.format(new Date(markedAt))}`,
+          text: `${match.fullName} already in · ${dayLabel(activeDay)} at ${formatMarkTime(markedAt)}`,
         });
       } else {
-        toggle(match, activeDay);
+        toggle(match.id, match.fullName, activeDay);
       }
       setQuery("");
     }
   }
 
-  const total = rows.length;
+  const total = delegates.length;
 
   return (
     <div className="register">
       <div className="register-days" role="group" aria-label="Conference day">
-        {DAYS.map(({ day, label, date }) => {
+        {ATTENDANCE_DAYS.map(({ day, label, date }) => {
           const present = tally[day];
           const share = total ? Math.round((present / total) * 100) : 0;
           const active = day === activeDay;
@@ -282,25 +227,7 @@ export function AttendanceBoard({ delegates, initialDay }: Props) {
         </div>
       </div>
 
-      <div className="register-notice" aria-live="polite">
-        {notice && (
-          <p className={`register-notice-line register-notice-${notice.tone}`}>
-            <span>{notice.text}</span>
-            {notice.undo && (
-              <button
-                type="button"
-                onClick={() => {
-                  const { id, day } = notice.undo!;
-                  const current = rows.find((row) => row.id === id);
-                  if (current) toggle(current, day);
-                }}
-              >
-                Undo
-              </button>
-            )}
-          </p>
-        )}
-      </div>
+      <AttendanceNotice notice={notice} onUndo={undo} />
 
       {total === 0 ? (
         <p className="admin-empty">No confirmed delegates yet</p>
@@ -317,7 +244,7 @@ export function AttendanceBoard({ delegates, initialDay }: Props) {
                 <th scope="col">Delegate</th>
                 <th scope="col" className="register-col-wide">School</th>
                 <th scope="col" className="register-col-wide">Seat</th>
-                {DAYS.map(({ day, label }) => (
+                {ATTENDANCE_DAYS.map(({ day, label }) => (
                   <th
                     key={day}
                     scope="col"
@@ -329,8 +256,8 @@ export function AttendanceBoard({ delegates, initialDay }: Props) {
               </tr>
             </thead>
             {groups.map((group) => {
-              const groupPresent = group.rows.filter(
-                (row) => row[dayKey(activeDay)],
+              const groupPresent = group.rows.filter((row) =>
+                isIn(row, activeDay),
               ).length;
               return (
                 <tbody key={group.title ?? "all"}>
@@ -349,7 +276,7 @@ export function AttendanceBoard({ delegates, initialDay }: Props) {
                     return (
                       <tr
                         key={row.id}
-                        className={row[dayKey(activeDay)] ? "register-row-in" : undefined}
+                        className={isIn(row, activeDay) ? "register-row-in" : undefined}
                       >
                         <td className="register-col-no">
                           {String(serials.get(row.id)).padStart(digits, "0")}
@@ -377,41 +304,19 @@ export function AttendanceBoard({ delegates, initialDay }: Props) {
                         <td className="register-col-wide">
                           {seat || <span className="register-muted">Unallotted</span>}
                         </td>
-                        {DAYS.map(({ day, label }) => {
-                          const markedAt = row[dayKey(day)];
-                          const busy = pending.has(`${row.id}:${day}`);
-                          return (
-                            <td
-                              key={day}
-                              className={`register-col-day${day === activeDay ? " register-col-active" : ""}`}
-                            >
-                              <button
-                                type="button"
-                                role="checkbox"
-                                aria-checked={Boolean(markedAt)}
-                                aria-label={`${row.fullName} present on ${label}`}
-                                aria-busy={busy}
-                                className="register-check"
-                                onClick={() => toggle(row, day)}
-                              >
-                                <span className="register-box" aria-hidden="true">
-                                  {markedAt && (
-                                    <svg viewBox="0 0 20 20">
-                                      <path d="M4 10.5 8.2 14.5 16 5.5" />
-                                    </svg>
-                                  )}
-                                </span>
-                                <span className="register-time">
-                                  {busy
-                                    ? "…"
-                                    : markedAt
-                                      ? timeFormat.format(new Date(markedAt))
-                                      : ""}
-                                </span>
-                              </button>
-                            </td>
-                          );
-                        })}
+                        {ATTENDANCE_DAYS.map(({ day, label }) => (
+                          <td
+                            key={day}
+                            className={`register-col-day${day === activeDay ? " register-col-active" : ""}`}
+                          >
+                            <AttendanceCheck
+                              markedAt={marksFor(row.id)[dayKey(day)]}
+                              busy={isPending(row.id, day)}
+                              label={`${row.fullName} present on ${label}`}
+                              onToggle={() => toggle(row.id, row.fullName, day)}
+                            />
+                          </td>
+                        ))}
                       </tr>
                     );
                   })}

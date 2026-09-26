@@ -5,11 +5,21 @@ import {
   type MatrixAllotmentInput,
   type MatrixCommitteeInput,
 } from "@/lib/allotments/country-matrix";
+import { currentConferenceDay, marksByDelegate } from "@/lib/attendance/days";
 
-export default async function CountriesPage() {
+type Props = {
+  searchParams: Promise<{ attendance?: string }>;
+};
+
+export default async function CountriesPage({ searchParams }: Props) {
+  const params = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: committees }, { data: allotments }] = await Promise.all([
+  const [
+    { data: committees },
+    { data: allotments },
+    { data: attendance },
+  ] = await Promise.all([
     supabase
       .from("committees")
       .select("id, name, is_published, country_pool")
@@ -21,6 +31,7 @@ export default async function CountriesPage() {
       )
       .not("country", "is", null)
       .not("committee_id", "is", null),
+    supabase.from("delegate_attendance").select("delegate_id, day, marked_at"),
   ]);
 
   const matrix = buildCountryMatrix(
@@ -34,9 +45,15 @@ export default async function CountriesPage() {
       <p className="admin-panel-lead">
         Per committee: which countries are taken, who holds them, and how many
         are still left. A country counts as taken as soon as it is set on an
-        allotment — pending or issued.
+        allotment — pending or issued. Turn on attendance to tick delegates
+        present committee by committee.
       </p>
-      <CountryMatrix committees={matrix} />
+      <CountryMatrix
+        committees={matrix}
+        attendance={marksByDelegate(attendance)}
+        initialDay={currentConferenceDay()}
+        initialAttendanceOn={params.attendance === "on"}
+      />
     </section>
   );
 }

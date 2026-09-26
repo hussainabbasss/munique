@@ -2165,6 +2165,104 @@ a.admin-stat-card:hover {
   margin-bottom: 0.25rem;
 }
 
+.admin-country-matrix-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+}
+
+.admin-country-matrix-switch {
+  min-height: 2.75rem;
+}
+
+.admin-country-matrix-switch[aria-checked="true"] {
+  color: var(--admin-text);
+  border-color: var(--admin-accent);
+}
+
+.admin-country-matrix-switch[aria-checked="true"] .admin-theme-toggle-track {
+  background: var(--register-in);
+}
+
+.admin-country-matrix-switch[aria-checked="true"] .admin-theme-toggle-thumb {
+  background: var(--admin-surface-raised);
+  transform: translateX(0.875rem);
+}
+
+.admin-country-matrix-switch:focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: 2px;
+}
+
+.admin-stat-grid.admin-country-matrix-stats-attendance {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 768px) {
+  .admin-stat-grid.admin-country-matrix-stats-attendance {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.attendance-stat-total {
+  margin-left: 0.125rem;
+  font-size: 0.55em;
+  color: var(--admin-text-muted);
+}
+
+/* Attendance mode: one 2.25rem line per seat holder in every column, so a
+   double-allotted seat's ticks line up with its names. */
+.admin-country-matrix-attend td {
+  padding-block: 0.375rem;
+  line-height: 2.25rem;
+  vertical-align: top;
+}
+
+.admin-country-matrix-attend td > div,
+.admin-country-matrix-attend .admin-badge {
+  line-height: 1.3;
+}
+
+.admin-country-matrix-attend .admin-badge {
+  vertical-align: middle;
+}
+
+.admin-country-matrix-attend td > div,
+.admin-country-matrix-attend td.register-col-day .register-check {
+  display: flex;
+  align-items: center;
+  min-height: 2.25rem;
+}
+
+.admin-country-matrix-attend td.register-col-day {
+  padding-block: 0.375rem;
+  padding-inline: 0.625rem;
+  text-align: left;
+}
+
+.admin-country-matrix-attend td.register-col-day .register-check {
+  flex-direction: row;
+  gap: 0.5rem;
+  min-width: 5.25rem;
+  padding: 0.25rem 0;
+}
+
+.admin-country-matrix-attend .register-box {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.admin-country-matrix-attend .register-box svg {
+  width: 1.0625rem;
+  height: 1.0625rem;
+}
+
+.admin-country-matrix-attend .register-time {
+  min-height: 0;
+}
+
 .admin-country-matrix-summary {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;

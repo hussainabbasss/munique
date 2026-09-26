@@ -5,6 +5,7 @@ import {
   AttendanceBoard,
   type AttendanceDelegate,
 } from "@/components/admin/attendance-board";
+import { currentConferenceDay, marksFromRows } from "@/lib/attendance/days";
 
 type DelegateRow = {
   id: string;
@@ -14,15 +15,6 @@ type DelegateRow = {
   allotments: { country: string | null; committees: { name: string } | null }[] | null;
   delegate_attendance: { day: number; marked_at: string }[] | null;
 };
-
-// Conference days in Pakistan time — the gate opens on the matching sheet.
-const DAY_2_DATE = "2026-10-18";
-
-function todayInKarachi() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(
-    new Date(),
-  );
-}
 
 export default async function AttendancePage() {
   const admin = await getAdminUser();
@@ -44,9 +36,6 @@ export default async function AttendancePage() {
       .sort((a, b) => a.display_order - b.display_order)
       .map((delegate) => {
         const allotment = delegate.allotments?.[0];
-        const marks = delegate.delegate_attendance ?? [];
-        const markedAt = (day: number) =>
-          marks.find((row) => row.day === day)?.marked_at ?? null;
         return {
           id: delegate.id,
           fullName: delegate.full_name,
@@ -56,8 +45,7 @@ export default async function AttendancePage() {
           school: reg.school,
           country: allotment?.country ?? null,
           committee: allotment?.committees?.name ?? null,
-          day1: markedAt(1),
-          day2: markedAt(2),
+          marks: marksFromRows(delegate.delegate_attendance),
         };
       }),
   );
@@ -73,7 +61,7 @@ export default async function AttendancePage() {
       </p>
       <AttendanceBoard
         delegates={delegates}
-        initialDay={todayInKarachi() >= DAY_2_DATE ? 2 : 1}
+        initialDay={currentConferenceDay()}
       />
     </section>
   );
