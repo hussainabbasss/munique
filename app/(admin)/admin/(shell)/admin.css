@@ -734,63 +734,537 @@ html[data-admin-boot-theme="dark"] .admin-theme-root:not([data-admin-theme-ready
   padding-right: 0.25rem;
 }
 
-/* ── Gate attendance ── */
+/* ── Gate attendance register ──
+   A ruled sign-in sheet: numbered rows, hairline rules, tick boxes per
+   day. The active day's column carries a faint highlighter wash. */
 
-.attendance-stats {
-  grid-template-columns: repeat(2, 1fr);
+.register {
+  --register-in: var(--status-confirmed);
+  --register-wash: color-mix(in oklab, var(--admin-accent) 6%, transparent);
+  --register-rule: var(--admin-hairline);
+}
+
+.admin-theme-root[data-theme="dark"] .register {
+  --register-in: oklch(74% 0.12 150);
+  --register-wash: color-mix(in oklab, var(--admin-accent) 12%, transparent);
+}
+
+/* Day tally */
+
+.register-days {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--admin-border);
   margin-bottom: 1rem;
 }
 
-.attendance-stat-total {
-  font-size: 1rem;
+.register-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.125rem 0.875rem;
+  text-align: left;
+  font: inherit;
+  color: var(--admin-text-muted);
+  background: transparent;
+  border: none;
+  border-top: 3px solid transparent;
+  cursor: pointer;
+  transition:
+    background var(--admin-transition),
+    color var(--admin-transition),
+    border-color var(--admin-transition);
+}
+
+.register-day + .register-day {
+  border-left: 1px solid var(--admin-border);
+}
+
+.register-day:hover {
+  background: var(--admin-row-hover);
+}
+
+.register-day-active {
+  color: var(--admin-text);
+  background: var(--register-wash);
+  border-top-color: var(--admin-accent);
+}
+
+.register-day:focus-visible,
+.register-segment button:focus-visible,
+.register-check:focus-visible,
+.register-notice-line button:focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: -2px;
+}
+
+.register-day-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+}
+
+.register-day-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.register-day-date {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
   color: var(--admin-text-muted);
 }
 
-.attendance-filters input {
-  flex: 1 1 16rem;
+.register-day-count {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 6vw, 3rem);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
-.attendance-main {
+.register-day-total {
+  margin-left: 0.125rem;
+  font-size: 0.5em;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+}
+
+.register-day-bar {
+  display: block;
+  height: 3px;
+  background: var(--admin-hairline);
+}
+
+.register-day-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--register-in);
+  transition: width 400ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.register-day-sub {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: var(--admin-text-muted);
+}
+
+/* Toolbar */
+
+.register-toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.625rem;
+  margin-bottom: 0.5rem;
 }
 
-@media (min-width: 768px) {
-  .attendance-main {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+.register-search {
+  position: relative;
+  flex: 1 1 18rem;
+  display: flex;
+}
+
+.register-search input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 2.5rem 0.5rem 0.875rem;
+  font-size: 0.9375rem;
+  color: var(--admin-text);
+  background: var(--admin-input-bg);
+  border: 1px solid var(--admin-border-strong);
+  border-radius: 0;
+  transition: border-color var(--admin-transition);
+}
+
+.register-search input:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+}
+
+.register-search kbd {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  padding: 0.0625rem 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--admin-text-muted);
+  border: 1px solid var(--admin-border);
+  pointer-events: none;
+}
+
+.register-search input:focus ~ kbd {
+  opacity: 0;
+}
+
+@media (hover: none) {
+  .register-search kbd {
+    display: none;
+  }
+
+  .register-search input {
+    padding-right: 0.875rem;
   }
 }
 
-.attendance-info {
-  min-width: 0;
+.register-segment {
+  display: inline-flex;
+  border: 1px solid var(--admin-border-strong);
 }
 
-.attendance-toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.attendance-toggle {
+.register-segment button {
   min-height: 2.75rem;
-  min-width: 9.5rem;
+  padding: 0 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--admin-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    background var(--admin-transition),
+    color var(--admin-transition);
 }
 
-.attendance-toggle.staff-payment-toggle-on {
+.register-segment button + button {
+  border-left: 1px solid var(--admin-border);
+}
+
+.register-segment button:hover {
+  color: var(--admin-text);
+  background: var(--admin-row-hover);
+}
+
+.register-segment button[aria-pressed="true"] {
+  color: var(--admin-primary-text);
+  background: var(--admin-primary-bg);
+}
+
+/* Last action line */
+
+.register-notice {
+  min-height: 2rem;
+  margin-bottom: 0.25rem;
+}
+
+.register-notice-line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.375rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  animation: register-fade 200ms ease-out;
+}
+
+.register-notice-ok {
+  color: var(--admin-text-muted);
+}
+
+.register-notice-error {
+  color: var(--status-error);
+}
+
+.register-notice-line button {
+  padding: 0.125rem 0.5rem;
+  font: inherit;
+  color: var(--admin-accent);
+  background: none;
+  border: 1px solid currentColor;
   cursor: pointer;
 }
 
-.attendance-toggle:disabled {
-  opacity: 0.6;
+/* The sheet */
+
+.register-sheet-wrap {
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface-raised);
+}
+
+.register-sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.register-sheet th,
+.register-sheet td {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--register-rule);
+}
+
+.register-sheet thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-block: 0.625rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--admin-text-muted);
+  background: var(--admin-surface-raised);
+  box-shadow: inset 0 -1px 0 var(--admin-border-strong);
+}
+
+.register-sheet thead th.register-col-active {
+  color: var(--admin-text);
+  background:
+    linear-gradient(var(--register-wash), var(--register-wash)),
+    var(--admin-surface-raised);
+}
+
+.register-sheet tbody tr {
+  transition: background var(--admin-transition);
+}
+
+.register-sheet tbody tr:hover {
+  background: var(--admin-row-hover);
+}
+
+.register-col-no {
+  width: 1%;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+  font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--register-rule);
+}
+
+.register-name {
+  display: block;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.register-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.1875rem;
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+}
+
+.register-id {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.03em;
+}
+
+.register-tag {
+  padding: 0 0.3125rem;
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--admin-border-strong);
+}
+
+.register-muted {
+  color: var(--admin-text-muted);
+  font-style: italic;
+}
+
+.register-col-wide {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .register-col-wide {
+    display: table-cell;
+    color: var(--admin-text-muted);
+  }
+
+  .register-meta-narrow {
+    display: none;
+  }
+}
+
+.register-col-day {
+  width: 1%;
+  padding-inline: 0.5rem;
+  text-align: center;
+  border-left: 1px solid var(--register-rule);
+}
+
+.register-sheet thead th.register-col-day {
+  text-align: center;
+}
+
+td.register-col-active {
+  background: var(--register-wash);
+}
+
+.register-row-in .register-col-no {
+  color: var(--register-in);
+}
+
+/* School group rows */
+
+.register-group th {
+  padding: 0.875rem 0.75rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--admin-text);
+  background: var(--admin-surface);
+  border-bottom: 1px solid var(--admin-border-strong);
+}
+
+.register-group th > span {
+  margin-right: 0.75rem;
+}
+
+.register-group-count {
+  font-weight: 400;
+  color: var(--admin-text-muted);
+}
+
+.register-sheet tbody + tbody .register-group th {
+  border-top: 1px solid var(--admin-border-strong);
+}
+
+/* Tick box */
+
+.register-check {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 3.5rem;
+  min-height: 3rem;
+  padding: 0.375rem 0.25rem 0.25rem;
+  background: none;
+  border: none;
+  color: var(--admin-text);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.register-check[aria-busy="true"] {
   cursor: progress;
 }
 
-.attendance-toggle:focus-visible {
-  outline: 2px solid var(--admin-accent);
-  outline-offset: 2px;
+.register-box {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: var(--admin-input-bg);
+  border: 1.5px solid var(--admin-border-strong);
+  transition:
+    border-color var(--admin-transition),
+    background var(--admin-transition);
+}
+
+.register-check:hover .register-box {
+  border-color: var(--admin-accent);
+}
+
+.register-check[aria-checked="true"] .register-box {
+  border-color: var(--register-in);
+  background: color-mix(in oklab, var(--register-in) 12%, transparent);
+}
+
+.register-box svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: var(--register-in);
+  stroke-width: 2.4;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-dasharray: 20;
+  stroke-dashoffset: 0;
+  animation: register-tick 260ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.register-time {
+  min-height: 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--register-in);
+  font-variant-numeric: tabular-nums;
+}
+
+.register-foot {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: var(--admin-text-muted);
+}
+
+@keyframes register-tick {
+  from {
+    stroke-dashoffset: 20;
+  }
+}
+
+@keyframes register-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .register-sheet th,
+  .register-sheet td {
+    padding-inline: 0.5rem;
+  }
+
+  .register-col-day {
+    padding-inline: 0.125rem;
+  }
+
+  .register-check {
+    min-width: 3rem;
+  }
+
+  .register-segment {
+    flex: 1 1 auto;
+  }
+
+  .register-segment button {
+    flex: 1 1 0;
+    padding: 0 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .register-box svg,
+  .register-notice-line {
+    animation: none;
+  }
+
+  .register-day-bar > span {
+    transition: none;
+  }
 }
 
 /* ── Metrics strip (overview) ── */
