@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import {
+  convertExcelToCsvAction,
   exportFormAllotmentsExcelAction,
   importFormRegistrationsAction,
   previewFormImportAction,
@@ -25,6 +26,15 @@ function downloadBase64(base64: string, filename: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
 }
 
 export function FormImportPanel({ canImport }: Props) {
@@ -52,11 +62,31 @@ export function FormImportPanel({ canImport }: Props) {
     setPreview(null);
     setAllowUnmatched(false);
     if (!file) return;
-    const text = await file.text();
     setFileName(file.name);
-    setCsvText(text);
     setBusy("preview");
     startTransition(async () => {
+      let text: string;
+      if (/\.xlsx$/i.test(file.name)) {
+        const result = await convertExcelToCsvAction(
+          arrayBufferToBase64(await file.arrayBuffer()),
+        );
+        if (!result.ok) {
+          setToast({ kind: "error", text: result.error });
+          setBusy(null);
+          return;
+        }
+        text = result.csvText;
+      } else if (/\.xls$/i.test(file.name)) {
+        setToast({
+          kind: "error",
+          text: "Old .xls files are not supported — save as .xlsx or download as CSV.",
+        });
+        setBusy(null);
+        return;
+      } else {
+        text = await file.text();
+      }
+      setCsvText(text);
       await refreshPreview(text);
       setBusy(null);
     });
@@ -110,7 +140,7 @@ export function FormImportPanel({ canImport }: Props) {
           Import Google Form responses
         </h2>
         <p className="admin-field-hint">
-          Upload the Form_Responses tab as CSV. Form registrants are imported
+          Upload the Form_Responses tab as CSV or Excel (.xlsx). Form registrants are imported
           as confirmed (no payment) with no registration or payment email.
           Anyone already registered — allotted or not — is skipped, so
           re-uploading the same sheet is safe.
@@ -121,7 +151,7 @@ export function FormImportPanel({ canImport }: Props) {
         <input
           ref={fileInput}
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className="admin-form-import-file"
           disabled={pending}
           onChange={(event) => onFile(event.target.files?.[0])}

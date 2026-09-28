@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminRole, requireAdminUser } from "@/lib/admin/helpers";
 import { generateRegistrationId } from "@/lib/registration/id";
+import { excelToCsv } from "@/lib/form-import/excel";
 import {
   buildCommitteeMatcher,
   dedupeByEmail,
@@ -224,6 +225,27 @@ async function buildPreview(
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────
+
+/** Excel upload (base64 .xlsx) → CSV text for the preview / import / export actions. */
+export async function convertExcelToCsvAction(
+  base64: string,
+): Promise<ActionResult<{ csvText: string }>> {
+  await requireAdminUser();
+  try {
+    const bytes = Buffer.from(base64, "base64");
+    const csvText = await excelToCsv(
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    );
+    return { ok: true, csvText };
+  } catch (error) {
+    console.error("[form-import] excel conversion failed", error);
+    return {
+      ok: false,
+      error:
+        "Could not read that Excel file. Save it as .xlsx (not .xls) or upload the CSV instead.",
+    };
+  }
+}
 
 /** Dry run: what an import of this CSV would create and skip. Writes nothing. */
 export async function previewFormImportAction(
