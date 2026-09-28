@@ -166,11 +166,16 @@ export async function resendRegistrationEmailAction(registrationId: string) {
 
   const { data: reg } = await supabase
     .from("registrations")
-    .select("id, registration_id, head_email, fee_amount")
+    .select("id, registration_id, head_email, fee_amount, source")
     .eq("id", registrationId)
     .single();
 
   if (!reg) return { error: "Registration not found." };
+  if (reg.source === "form_import") {
+    return {
+      error: "Google Form imports do not get a registration email — they pay nothing.",
+    };
+  }
 
   const pricing = await fetchActivePricing();
   if (!pricing) {

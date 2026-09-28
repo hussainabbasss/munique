@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { AllotmentsManager } from "@/components/admin/allotments-manager";
+import { FormImportPanel } from "@/components/admin/form-import-panel";
 import { getAdminUser } from "@/lib/admin/helpers";
 import { countPendingAllotmentEmails } from "@/lib/allotments/pending-email";
 
@@ -105,6 +106,7 @@ export default async function AllotmentsPage() {
         Each delegate is allotted separately — including members of a
         delegation. Review suggestions, adjust, then issue emails.
       </p>
+      <FormImportPanel canImport={admin?.role === "admin"} />
       <AllotmentsManager
         allotments={allotments ?? []}
         committees={(committees ?? []).map((committee) => ({

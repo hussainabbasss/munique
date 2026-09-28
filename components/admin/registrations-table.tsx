@@ -29,6 +29,7 @@ type RegistrationRow = {
   payment_proof_path: string | null;
   registration_email_sent_at: string | null;
   payment_email_sent_at: string | null;
+  source?: string;
   delegates: Delegate[];
   committee_pref_1: { name: string } | null;
 };
@@ -186,28 +187,31 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
                 </p>
               )}
 
-              <form action={resendAction} className="admin-actions">
-                <input type="hidden" name="registration_id" value={selected.id} />
-                <button
-                  type="submit"
-                  className="btn-admin-secondary"
-                  disabled={resending}
-                >
-                  {resending
-                    ? "Sending…"
-                    : selected.registration_email_sent_at
-                      ? "Resend registration email"
-                      : "Send registration email"}
-                </button>
-                {resendState?.success && (
-                  <span className="admin-field-hint">{resendState.success}</span>
-                )}
-                {resendState?.error && (
-                  <span className="admin-toast admin-toast-error">
-                    {resendState.error}
-                  </span>
-                )}
-              </form>
+              {/* Form imports never get the registration (payment instructions) email */}
+              {selected.source !== "form_import" && (
+                <form action={resendAction} className="admin-actions">
+                  <input type="hidden" name="registration_id" value={selected.id} />
+                  <button
+                    type="submit"
+                    className="btn-admin-secondary"
+                    disabled={resending}
+                  >
+                    {resending
+                      ? "Sending…"
+                      : selected.registration_email_sent_at
+                        ? "Resend registration email"
+                        : "Send registration email"}
+                  </button>
+                  {resendState?.success && (
+                    <span className="admin-field-hint">{resendState.success}</span>
+                  )}
+                  {resendState?.error && (
+                    <span className="admin-toast admin-toast-error">
+                      {resendState.error}
+                    </span>
+                  )}
+                </form>
+              )}
 
               {selected.payment_status === "pending" && (
                 <div className="admin-actions">
