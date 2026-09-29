@@ -15,13 +15,18 @@ export async function runMeritEngineAction(formData?: FormData) {
   // Optional group (e.g. a school batch) seated where committees are thinnest
   const fillGroup = String(formData?.get("fill_group") ?? "").trim();
   const fillNeedle = fillGroup.toLowerCase();
+  // Google Form imports (the AMHSS batch) carry no school tag — match on source
+  const fillImports = formData?.get("fill_form_imports") === "on";
+  const fillLabel = [fillImports ? "Form imports" : null, fillGroup || null]
+    .filter(Boolean)
+    .join(" + ");
 
   const [{ data: confirmed, error: confirmedError }, { data: publishedCommittees }] =
     await Promise.all([
       supabase
         .from("registrations")
         .select(
-          "id, type, school, head_email, brand_ambassador_name, mun_experience, payment_status, delegates(id, full_name, email, is_head_delegate, committee_pref_1, committee_pref_2, committee_pref_3, mun_experience)",
+          "id, type, school, source, head_email, brand_ambassador_name, mun_experience, payment_status, delegates(id, full_name, email, is_head_delegate, committee_pref_1, committee_pref_2, committee_pref_3, mun_experience)",
         )
         .eq("payment_status", "confirmed"),
       supabase
@@ -113,10 +118,12 @@ export async function runMeritEngineAction(formData?: FormData) {
         committee_pref_1: delegate.committee_pref_1,
         committee_pref_2: delegate.committee_pref_2,
         committee_pref_3: delegate.committee_pref_3,
-        fill: Boolean(
-          fillNeedle &&
-            `${groupText} ${delegate.email ?? ""}`.toLowerCase().includes(fillNeedle),
-        ),
+        fill:
+          (fillImports && reg.source === "form_import") ||
+          Boolean(
+            fillNeedle &&
+              `${groupText} ${delegate.email ?? ""}`.toLowerCase().includes(fillNeedle),
+          ),
       });
     }
   }
@@ -128,9 +135,11 @@ export async function runMeritEngineAction(formData?: FormData) {
   }
 
   const fillCount = people.filter((p) => p.fill).length;
-  if (fillGroup && fillCount === 0) {
+  if (fillLabel && fillCount === 0) {
     return {
-      error: `No waiting delegate matches "${fillGroup}" (school, reference or email) — nothing was changed.`,
+      error: fillImports
+        ? `No waiting delegate is a Google Form import${fillGroup ? ` or matches "${fillGroup}"` : ""} — nothing was changed.`
+        : `No waiting delegate matches "${fillGroup}" (school, reference or email) — nothing was changed.`,
     };
   }
 
@@ -182,7 +191,7 @@ export async function runMeritEngineAction(formData?: FormData) {
           const name = committeeName.get(r.committee_id) ?? "?";
           counts.set(name, (counts.get(name) ?? 0) + 1);
         }
-        return `${fillGroup} (${fillCount}): ${[...counts]
+        return `${fillLabel} (${fillCount}): ${[...counts]
           .sort((a, b) => b[1] - a[1])
           .map(([name, n]) => `${name} ${n}`)
           .join(", ")}`;

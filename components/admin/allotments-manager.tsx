@@ -297,10 +297,21 @@ export function AllotmentsManager({
               type="text"
               name="fill_group"
               className="admin-engine-fill"
-              placeholder="Fill thin committees for… (e.g. AMHSS)"
+              placeholder="Or match school / reference / email…"
               title="Waiting delegates whose school, reference or email contains this are seated only in the 3 committees with the most free seats — their first preference among those, otherwise the emptiest"
               disabled={running}
             />
+            <label
+              className="admin-engine-check"
+              title="Google Form imports are seated only in the 3 committees with the most free seats"
+            >
+              <input
+                type="checkbox"
+                name="fill_form_imports"
+                disabled={running}
+              />
+              Google Form imports fill emptiest committees
+            </label>
             <button type="submit" className="btn-admin-secondary" disabled={running}>
               {running ? "Running…" : "Run merit engine"}
             </button>

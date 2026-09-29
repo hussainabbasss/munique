@@ -2723,7 +2723,8 @@ a.admin-stat-card:hover {
 .admin-engine-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.5rem 0.875rem;
 }
 
 .admin-engine-fill {
@@ -2734,4 +2735,13 @@ a.admin-stat-card:hover {
   color: var(--admin-text);
   background: var(--admin-input-bg);
   border: 1px solid var(--admin-border-strong);
+}
+
+.admin-engine-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--admin-text);
+  cursor: pointer;
 }
