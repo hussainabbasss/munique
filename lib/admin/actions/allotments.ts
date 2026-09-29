@@ -3,28 +3,37 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { seatKey } from "@/lib/allotments/countries";
-import { suggestAllotment } from "@/lib/allotments/merit-engine";
-import type { MeritDelegateInput } from "@/lib/allotments/types";
+import { assignSeats, scoreMerit, type EnginePerson } from "@/lib/allotments/batch-engine";
 import { sendAllotmentChanged, sendAllotmentIssued } from "@/lib/email/send";
 import { requireAdminRole, requireAdminUser } from "@/lib/admin/helpers";
 
-export async function runMeritEngineAction() {
+export async function runMeritEngineAction(formData?: FormData) {
   await requireAdminUser();
   const supabase = await createClient();
+  const startedAt = Date.now();
 
-  const [{ data: confirmed }, { data: publishedCommittees }] = await Promise.all([
-    supabase
-      .from("registrations")
-      .select(
-        "id, type, school, mun_experience, payment_status, delegates(id, full_name, is_head_delegate, committee_pref_1, committee_pref_2, committee_pref_3, mun_experience)",
-      )
-      .eq("payment_status", "confirmed"),
-    supabase
-      .from("committees")
-      .select("id, name, agenda, difficulty_tier, country_pool")
-      .eq("is_published", true)
-      .order("display_order"),
-  ]);
+  // Optional group (e.g. a school batch) seated where committees are thinnest
+  const fillGroup = String(formData?.get("fill_group") ?? "").trim();
+  const fillNeedle = fillGroup.toLowerCase();
+
+  const [{ data: confirmed, error: confirmedError }, { data: publishedCommittees }] =
+    await Promise.all([
+      supabase
+        .from("registrations")
+        .select(
+          "id, type, school, head_email, brand_ambassador_name, mun_experience, payment_status, delegates(id, full_name, email, is_head_delegate, committee_pref_1, committee_pref_2, committee_pref_3, mun_experience)",
+        )
+        .eq("payment_status", "confirmed"),
+      supabase
+        .from("committees")
+        .select("id, name, agenda, difficulty_tier, country_pool")
+        .eq("is_published", true)
+        .order("display_order"),
+    ]);
+
+  if (confirmedError) {
+    return { error: `Could not load registrations — nothing was changed. (${confirmedError.message})` };
+  }
 
   if (!confirmed?.length) {
     return { error: "No confirmed registrations to score." };
@@ -34,7 +43,7 @@ export async function runMeritEngineAction() {
     return { error: "No published committees — publish committees first." };
   }
 
-  const committees = (publishedCommittees ?? []).map((committee) => ({
+  const committees = publishedCommittees.map((committee) => ({
     ...committee,
     country_pool: committee.country_pool ?? [],
   }));
@@ -44,30 +53,6 @@ export async function runMeritEngineAction() {
       error:
         "No published committees with an allotment pool — add allotments on each committee first.",
     };
-  }
-
-  const people: MeritDelegateInput[] = [];
-  for (const reg of confirmed) {
-    for (const delegate of reg.delegates ?? []) {
-      people.push({
-        id: delegate.id,
-        registration_id: reg.id,
-        full_name: delegate.full_name,
-        is_head_delegate: delegate.is_head_delegate,
-        type: reg.type as "delegate" | "delegation",
-        school: reg.school,
-        mun_experience:
-          (delegate.mun_experience && String(delegate.mun_experience).trim()) ||
-          reg.mun_experience,
-        committee_pref_1: delegate.committee_pref_1,
-        committee_pref_2: delegate.committee_pref_2,
-        committee_pref_3: delegate.committee_pref_3,
-      });
-    }
-  }
-
-  if (!people.length) {
-    return { error: "No delegates found on confirmed registrations." };
   }
 
   // Every allotment, not just this batch — a failed lookup here would make the
@@ -88,117 +73,134 @@ export async function runMeritEngineAction() {
 
   // Seats are per committee: Pakistan in one committee leaves Pakistan free elsewhere
   const takenSeats = new Set<string>();
-  let processed = 0;
-  let failed = 0;
-  let skipped = 0;
-
-  // Seed from every held seat so re-runs don't double-assign within a committee
   for (const row of existingAllotments ?? []) {
     if (row.country && row.committee_id) {
       takenSeats.add(seatKey(row.committee_id, row.country));
     }
   }
 
-  // Free tier ≈ 15 RPM for flash-lite — stay under that by default
-  const paceMs = Number(process.env.GEMINI_PACE_MS ?? "5000");
-  let stoppedEarly = false;
-  let earlyStopReason: string | null = null;
+  const people: EnginePerson[] = [];
+  let skipped = 0;
 
-  for (const person of people) {
-    const existing = existingByDelegate.get(person.id);
-    if (existing?.status === "issued" || existing?.is_override) {
-      skipped++;
-      continue;
-    }
+  for (const reg of confirmed) {
+    const groupText = [reg.school, reg.brand_ambassador_name, reg.head_email]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-    // Already has a suggested seat — don't burn quota re-scoring unless empty
-    if (existing?.country && existing?.status === "pending") {
-      skipped++;
-      continue;
-    }
-
-    if (processed + failed > 0 && paceMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, paceMs));
-    }
-
-    const result = await suggestAllotment({
-      person,
-      committees,
-      takenSeats,
-    });
-
-    if (result.ok) {
-      const { error: saveError } = await supabase.from("allotments").upsert(
-        {
-          registration_id: person.registration_id,
-          delegate_id: person.id,
-          merit_score: result.merit_score,
-          country: result.country,
-          committee_id: result.committee_id,
-          ai_reasoning: result.reasoning ?? null,
-          is_override: false,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "delegate_id" },
-      );
-
-      if (saveError) {
-        // Not saved, so the seat is not actually held
-        takenSeats.delete(seatKey(result.committee_id, result.country));
-        console.error("[allotments] could not save suggestion", {
-          delegateId: person.id,
-          error: saveError.message,
-        });
-        failed++;
+    for (const delegate of reg.delegates ?? []) {
+      const existing = existingByDelegate.get(delegate.id);
+      // Issued, overridden or already suggested seats are never re-allotted
+      if (
+        existing?.status === "issued" ||
+        existing?.is_override ||
+        (existing?.country && existing?.status === "pending")
+      ) {
+        skipped++;
         continue;
       }
-      processed++;
-    } else {
-      await supabase.from("allotments").upsert(
-        {
-          registration_id: person.registration_id,
-          delegate_id: person.id,
-          merit_score: null,
-          country: null,
-          committee_id: null,
-          ai_reasoning: result.reason,
-          is_override: false,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "delegate_id" },
-      );
-      failed++;
 
-      if (result.abortBatch || result.quotaExhausted) {
-        stoppedEarly = true;
-        earlyStopReason = result.reason;
-        break;
-      }
+      people.push({
+        id: delegate.id,
+        registration_id: reg.id,
+        full_name: delegate.full_name,
+        is_head_delegate: delegate.is_head_delegate,
+        type: reg.type as "delegate" | "delegation",
+        school: reg.school,
+        mun_experience:
+          (delegate.mun_experience && String(delegate.mun_experience).trim()) ||
+          reg.mun_experience,
+        committee_pref_1: delegate.committee_pref_1,
+        committee_pref_2: delegate.committee_pref_2,
+        committee_pref_3: delegate.committee_pref_3,
+        fill: Boolean(
+          fillNeedle &&
+            `${groupText} ${delegate.email ?? ""}`.toLowerCase().includes(fillNeedle),
+        ),
+      });
     }
+  }
+
+  if (!people.length) {
+    return {
+      error: `Nobody is waiting for the merit engine${skipped ? ` (${skipped} already hold a seat)` : ""}.`,
+    };
+  }
+
+  const fillCount = people.filter((p) => p.fill).length;
+  if (fillGroup && fillCount === 0) {
+    return {
+      error: `No waiting delegate matches "${fillGroup}" (school, reference or email) — nothing was changed.`,
+    };
+  }
+
+  const { scores, geminiCalls, fallbackReason } = await scoreMerit(people);
+  const scoredAt = Date.now();
+
+  const results = assignSeats({
+    people,
+    scores: new Map([...scores].map(([id, s]) => [id, s.score])),
+    committees,
+    takenSeats,
+  });
+
+  const now = new Date().toISOString();
+  const rows = results.map((result) => ({
+    registration_id: result.person.registration_id,
+    delegate_id: result.person.id,
+    merit_score: result.merit_score,
+    country: result.ok ? result.country : null,
+    committee_id: result.ok ? result.committee_id : null,
+    ai_reasoning: result.ok
+      ? `${result.reasoning}${scores.get(result.person.id)?.source === "heuristic" ? " (Merit from keyword fallback — Gemini unavailable.)" : ""}`
+      : result.reason,
+    is_override: false,
+    updated_at: now,
+  }));
+
+  const { error: saveError } = await supabase
+    .from("allotments")
+    .upsert(rows, { onConflict: "delegate_id" });
+
+  if (saveError) {
+    return { error: `Allotments could not be saved — nothing was changed. (${saveError.message})` };
   }
 
   revalidatePath("/admin/allotments");
   revalidatePath("/admin/countries");
 
-  if (stoppedEarly) {
-    return {
-      error:
-        earlyStopReason ??
-        `Merit engine stopped early after scoring ${processed} delegate${processed === 1 ? "" : "s"}. Remaining people can be set manually via Set allotment.`,
-    };
-  }
+  const seated = results.filter((r) => r.ok);
+  const unseated = results.length - seated.length;
+  const seconds = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+  const committeeName = new Map(committees.map((c) => [c.id, c.name]));
+
+  const fillSummary = fillCount
+    ? (() => {
+        const counts = new Map<string, number>();
+        for (const r of seated) {
+          if (!r.person.fill) continue;
+          const name = committeeName.get(r.committee_id) ?? "?";
+          counts.set(name, (counts.get(name) ?? 0) + 1);
+        }
+        return `${fillGroup} (${fillCount}): ${[...counts]
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, n]) => `${name} ${n}`)
+          .join(", ")}`;
+      })()
+    : null;
+
+  const heuristicCount = [...scores.values()].filter((s) => s.source === "heuristic").length;
 
   const parts = [
-    `Scored ${processed} delegates with Gemini`,
-    failed > 0 ? `${failed} failed — set manually` : null,
-    skipped > 0 ? `skipped ${skipped} issued/overridden/already suggested` : null,
+    `Allotted ${seated.length} of ${people.length} in ${seconds(Date.now() - startedAt)} (scoring ${seconds(scoredAt - startedAt)}, ${geminiCalls} Gemini call${geminiCalls === 1 ? "" : "s"})`,
+    fillSummary,
+    heuristicCount
+      ? `${heuristicCount} scored by keyword fallback${fallbackReason ? ` — Gemini: ${fallbackReason.slice(0, 120)}` : ""}`
+      : null,
+    unseated ? `${unseated} could not be seated — set manually` : null,
+    skipped ? `skipped ${skipped} already holding a seat` : null,
+    "Nothing was emailed — review, then Issue allotments",
   ].filter(Boolean);
-
-  if (processed === 0 && failed > 0) {
-    return {
-      error: `Merit engine failed for ${failed} delegate${failed === 1 ? "" : "s"}. Use Set allotment to assign manually.`,
-    };
-  }
 
   return { success: `${parts.join(". ")}.` };
 }

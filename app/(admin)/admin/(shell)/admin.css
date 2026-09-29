@@ -2719,3 +2719,19 @@ a.admin-stat-card:hover {
   margin-bottom: 0.625rem;
   color: var(--admin-text-muted);
 }
+
+.admin-engine-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-engine-fill {
+  min-width: 16rem;
+  max-width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--admin-text);
+  background: var(--admin-input-bg);
+  border: 1px solid var(--admin-border-strong);
+}

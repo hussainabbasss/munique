@@ -100,7 +100,8 @@ export function AllotmentsManager({
   const [changeNote, setChangeNote] = useState("");
 
   const [engineState, engineAction, running] = useActionState(
-    async () => runMeritEngineAction(),
+    async (_prev: { success?: string; error?: string } | null, formData: FormData) =>
+      runMeritEngineAction(formData),
     null,
   );
   const [issueState, issueAction, issuing] = useActionState(
@@ -291,11 +292,17 @@ export function AllotmentsManager({
     <>
       <div className="admin-allotment-toolbar">
         <div className="admin-allotment-toolbar-actions">
-          <form action={engineAction}>
+          <form action={engineAction} className="admin-engine-form">
+            <input
+              type="text"
+              name="fill_group"
+              className="admin-engine-fill"
+              placeholder="Fill thin committees for… (e.g. AMHSS)"
+              title="Waiting delegates whose school, reference or email contains this go to the committees with the most free seats, ignoring preferences"
+              disabled={running}
+            />
             <button type="submit" className="btn-admin-secondary" disabled={running}>
-              {running
-                ? "Running… (free tier is slow — wait)"
-                : "Run merit engine"}
+              {running ? "Running…" : "Run merit engine"}
             </button>
           </form>
           {canIssue && (
