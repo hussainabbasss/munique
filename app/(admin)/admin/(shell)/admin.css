@@ -2745,3 +2745,55 @@ a.admin-stat-card:hover {
   color: var(--admin-text);
   cursor: pointer;
 }
+
+.admin-engine-options {
+  position: relative;
+}
+
+.admin-engine-options > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.admin-engine-options > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-engine-options > summary::after {
+  content: " ▾";
+}
+
+.admin-engine-options[open] > summary::after {
+  content: " ▴";
+}
+
+.admin-engine-options-panel {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: 0.875rem 1rem 1rem;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-strong);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.28);
+}
+
+.admin-engine-options-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.admin-engine-options-panel .admin-field-hint {
+  margin: 0;
+}
+
+.admin-engine-options-panel .admin-engine-fill {
+  min-width: 0;
+  width: 100%;
+}

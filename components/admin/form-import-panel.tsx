@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import {
   convertExcelToCsvAction,
   exportFormAllotmentsExcelAction,
+  exportFormStudentsExcelAction,
   importFormRegistrationsAction,
   previewFormImportAction,
   type FormImportPreview,
@@ -15,7 +16,7 @@ type Props = {
 
 type Toast = { kind: "success" | "error"; text: string } | null;
 
-function downloadBase64(base64: string, filename: string) {
+export function downloadBase64(base64: string, filename: string) {
   const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
   const blob = new Blob([bytes], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -296,5 +297,35 @@ export function FormImportPanel({ canImport }: Props) {
         </>
       )}
     </section>
+  );
+}
+
+/** All Google Form imports with MUN code and allotment — no upload needed. */
+export function FormStudentsExcelButton() {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const onClick = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await exportFormStudentsExcelAction();
+      if (result.ok) downloadBase64(result.base64, result.filename);
+      else setError(result.error);
+    });
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="btn-admin-secondary"
+        disabled={pending}
+        onClick={onClick}
+        title="Every student imported from the Google Form, with MUN code and allotment"
+      >
+        {pending ? "Building…" : "Form students (Excel)"}
+      </button>
+      {error && <span className="admin-toast admin-toast-error">{error}</span>}
+    </>
   );
 }

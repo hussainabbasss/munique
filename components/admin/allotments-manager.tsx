@@ -13,6 +13,7 @@ import {
 } from "@/lib/allotments/pending-email";
 import { CountryPicker } from "@/components/admin/country-picker";
 import { RegistrationProfileDialog } from "@/components/admin/registration-profile-dialog";
+import { FormStudentsExcelButton } from "@/components/admin/form-import-panel";
 
 type DelegateRow = {
   id: string;
@@ -87,6 +88,10 @@ export function AllotmentsManager({
 }: Props) {
   const [typeTab, setTypeTab] = useState<TypeTab>("delegate");
   const [statusTab, setStatusTab] = useState<StatusTab>("pending");
+  // Merit engine options — kept in state so the Options badge shows what's on
+  const [fillImports, setFillImports] = useState(false);
+  const [fillGroup, setFillGroup] = useState("");
+  const activeOptions = Number(fillImports) + Number(fillGroup.trim() !== "");
   const [editing, setEditing] = useState<AllotmentRow | null>(null);
   const [editCommitteeId, setEditCommitteeId] = useState("");
   const [editCountry, setEditCountry] = useState("");
@@ -293,29 +298,43 @@ export function AllotmentsManager({
       <div className="admin-allotment-toolbar">
         <div className="admin-allotment-toolbar-actions">
           <form action={engineAction} className="admin-engine-form">
-            <input
-              type="text"
-              name="fill_group"
-              className="admin-engine-fill"
-              placeholder="Or match school / reference / email…"
-              title="Waiting delegates whose school, reference or email contains this are seated only in the 3 committees with the most free seats — their first preference among those, otherwise the emptiest"
-              disabled={running}
-            />
-            <label
-              className="admin-engine-check"
-              title="Google Form imports are seated only in the 3 committees with the most free seats"
-            >
-              <input
-                type="checkbox"
-                name="fill_form_imports"
-                disabled={running}
-              />
-              Google Form imports fill emptiest committees
-            </label>
             <button type="submit" className="btn-admin-secondary" disabled={running}>
               {running ? "Running…" : "Run merit engine"}
             </button>
+            <details className="admin-engine-options">
+              <summary className="btn-admin-secondary">
+                Options{activeOptions > 0 ? ` (${activeOptions})` : ""}
+              </summary>
+              <div className="admin-engine-options-panel">
+                <p className="admin-engine-options-title">Fill emptiest committees</p>
+                <p className="admin-field-hint">
+                  These delegates are seated only in the 3 committees with the
+                  most free seats — their first preference among those,
+                  otherwise the emptiest.
+                </p>
+                <label className="admin-engine-check">
+                  <input
+                    type="checkbox"
+                    name="fill_form_imports"
+                    checked={fillImports}
+                    onChange={(event) => setFillImports(event.target.checked)}
+                    disabled={running}
+                  />
+                  Google Form imports
+                </label>
+                <input
+                  type="text"
+                  name="fill_group"
+                  className="admin-engine-fill"
+                  placeholder="Match school / reference / email…"
+                  value={fillGroup}
+                  onChange={(event) => setFillGroup(event.target.value)}
+                  disabled={running}
+                />
+              </div>
+            </details>
           </form>
+          <FormStudentsExcelButton />
           {canIssue && (
             <button
               type="button"

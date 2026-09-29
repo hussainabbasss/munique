@@ -224,6 +224,45 @@ async function buildPreview(
   return { preview, toCreate };
 }
 
+/** Purple header, tinted allotment columns, fitted widths and a filter row. */
+function finishSheet(
+  sheet: ExcelJS.Worksheet,
+  columnCount: number,
+  tintedColumns: number[],
+) {
+  const header = sheet.getRow(1);
+  header.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  header.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FF5B2C83" },
+  };
+  header.height = 22;
+
+  for (let r = 2; r <= sheet.rowCount; r++) {
+    for (const col of tintedColumns) {
+      sheet.getRow(r).getCell(col).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFF3ECFA" },
+      };
+    }
+  }
+
+  sheet.columns.forEach((column) => {
+    let width = 0;
+    column.eachCell?.({ includeEmpty: false }, (cell) => {
+      width = Math.max(width, String(cell.value ?? "").length);
+    });
+    column.width = Math.min(Math.max(width + 2, 10), 50);
+  });
+
+  sheet.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: columnCount },
+  };
+}
+
 // ── Actions ────────────────────────────────────────────────────────────────
 
 /** Excel upload (base64 .xlsx) → CSV text for the preview / import / export actions. */
@@ -484,49 +523,134 @@ export async function exportFormAllotmentsExcelAction(
     }
   }
 
-  // Header: the sheet's purple, white bold text
-  const header = sheet.getRow(1);
-  header.font = { bold: true, color: { argb: "FFFFFFFF" } };
-  header.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF5B2C83" },
-  };
-  header.height = 22;
-
-  // Tint the added columns so they stand out beside the name
-  const tinted = [
+  finishSheet(sheet, outHeaders.length, [
     ...added.map((_, i) => insertAt + i + 1),
     outHeaders.length - 1,
-  ];
-  for (let r = 2; r <= sheet.rowCount; r++) {
-    for (const col of tinted) {
-      sheet.getRow(r).getCell(col).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFF3ECFA" },
-      };
-    }
-  }
-
-  sheet.columns.forEach((column, index) => {
-    const title = outHeaders[index] ?? "";
-    let width = title.length;
-    column.eachCell?.({ includeEmpty: false }, (cell) => {
-      width = Math.max(width, String(cell.value ?? "").length);
-    });
-    column.width = Math.min(Math.max(width + 2, 10), 50);
-  });
-
-  sheet.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: 1, column: outHeaders.length },
-  };
+  ]);
 
   const buffer = await workbook.xlsx.writeBuffer();
   return {
     ok: true,
     base64: Buffer.from(buffer).toString("base64"),
     filename: `munique-form-allotments-${new Date().toISOString().slice(0, 10)}.xlsx`,
+  };
+}
+
+type FormStudentRow = {
+  registration_id: string;
+  payment_status: string;
+  school: string;
+  brand_ambassador_name: string | null;
+  created_at: string;
+  delegates: {
+    id: string;
+    full_name: string;
+    email: string | null;
+    phone: string | null;
+    mun_experience: string | null;
+    allotment_email_sent_at: string | null;
+    pref1: { name: string } | null;
+    pref2: { name: string } | null;
+    allotments: AllotmentJoin | AllotmentJoin[] | null;
+  }[];
+};
+
+/**
+ * Every Google Form import with their MUN code and allotment — straight from
+ * the database, no CSV needed.
+ */
+export async function exportFormStudentsExcelAction(): Promise<
+  ActionResult<{ base64: string; filename: string; count: number }>
+> {
+  await requireAdminUser();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("registrations")
+    .select(
+      `registration_id, payment_status, school, brand_ambassador_name, created_at,
+      delegates(
+        id, full_name, email, phone, mun_experience, allotment_email_sent_at,
+        pref1:committees!delegates_committee_pref_1_fkey(name),
+        pref2:committees!delegates_committee_pref_2_fkey(name),
+        allotments(country, status, committees(name))
+      )`,
+    )
+    .eq("source", "form_import");
+
+  if (error) return { ok: false, error: error.message };
+
+  const students = ((data ?? []) as unknown as FormStudentRow[])
+    .flatMap((reg) =>
+      reg.delegates.map((delegate) => ({
+        reg,
+        delegate,
+        info: describe({
+          id: delegate.id,
+          email: delegate.email ?? "",
+          allotment_email_sent_at: delegate.allotment_email_sent_at,
+          registrations: {
+            registration_id: reg.registration_id,
+            payment_status: reg.payment_status,
+          },
+          allotments: delegate.allotments,
+        }),
+      })),
+    )
+    .sort((a, b) => a.delegate.full_name.localeCompare(b.delegate.full_name));
+
+  if (!students.length) {
+    return { ok: false, error: "No Google Form imports yet." };
+  }
+
+  const headers = [
+    "MUN Code",
+    "Full Name",
+    "Committee",
+    "Country",
+    "Allotment Status",
+    "Email",
+    "Phone Number",
+    "Class and Section",
+    "Committee preference 1",
+    "Committee preference 2",
+    "Past MUN/Debating Experience",
+    "Reference",
+    "Imported",
+  ];
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Munique admin";
+  const sheet = workbook.addWorksheet("Form students", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
+  sheet.addRow(headers);
+
+  for (const { reg, delegate, info } of students) {
+    sheet.addRow([
+      info.code,
+      delegate.full_name,
+      info.committee,
+      info.country,
+      info.status,
+      delegate.email ?? "",
+      delegate.phone ?? "",
+      reg.school,
+      delegate.pref1?.name ?? "",
+      delegate.pref2?.name ?? "",
+      delegate.mun_experience ?? "",
+      reg.brand_ambassador_name ?? "",
+      reg.created_at.slice(0, 10),
+    ]);
+  }
+
+  finishSheet(sheet, headers.length, [1, 3, 4, 5]);
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return {
+    ok: true,
+    count: students.length,
+    base64: Buffer.from(buffer).toString("base64"),
+    filename: `munique-form-students-${new Date().toISOString().slice(0, 10)}.xlsx`,
   };
 }
