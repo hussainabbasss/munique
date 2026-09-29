@@ -19,8 +19,9 @@ import type {
  *    high-difficulty committee and their merit is low, then later preferences.
  *    Within a committee the next free country in pool order is taken, so the
  *    pool's order decides which seats go to the strongest delegates.
- * 3. People in a "fill" group ignore preferences and go to whichever committee
- *    has the most free seats at that moment, which evens out thin committees.
+ * 3. People in a "fill" group are seated only in the 3 committees with the
+ *    most free seats: their first preference among those (UNSC → PNA skips
+ *    UNSC if it is not one of them), otherwise the emptiest of the three.
  */
 
 const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
@@ -28,6 +29,8 @@ const SCORE_CHUNK = 40;
 /** Below this, a high-difficulty first preference moves to a later preference. */
 const HIGH_DIFFICULTY_MIN_SCORE = 40;
 const MAX_RETRY_DELAY_MS = 65_000;
+/** A fill group is seated only in this many committees with the most free seats. */
+const FILL_COMMITTEES = 3;
 
 export type EnginePerson = MeritDelegateInput & {
   /** Seat by most free seats instead of preferences */
@@ -234,15 +237,16 @@ export function assignSeats(params: {
     let why: string;
 
     if (person.fill) {
-      const prefRank = (c: MeritCommittee) => {
-        const rank = prefs.findIndex((p) => p.id === c.id);
-        return rank === -1 ? 99 : rank;
-      };
-      committee = [...open].sort(
-        (a, b) =>
-          free(b).length - free(a).length || prefRank(a) - prefRank(b),
-      )[0];
-      why = `Group fill — ${committee.name} had the most free seats (${free(committee).length}).`;
+      // Only the emptiest committees count; preferences choose among them
+      const emptiest = [...open]
+        .sort((a, b) => free(b).length - free(a).length)
+        .slice(0, FILL_COMMITTEES);
+      const preferred = prefs.find((p) => emptiest.some((c) => c.id === p.id));
+      committee = preferred ?? emptiest[0];
+      const top = emptiest.map((c) => c.name).join(", ");
+      why = preferred
+        ? `Group fill — preference ${prefs.indexOf(preferred) + 1} (${preferred.name}) is among the emptiest committees (${top}).`
+        : `Group fill — no preference among the emptiest committees (${top}); placed in ${committee.name} (${free(committee).length} free).`;
     } else {
       const openPrefs = prefs.filter((c) => free(c).length > 0);
       const suitable = openPrefs.find(

@@ -298,7 +298,7 @@ export function AllotmentsManager({
               name="fill_group"
               className="admin-engine-fill"
               placeholder="Fill thin committees for… (e.g. AMHSS)"
-              title="Waiting delegates whose school, reference or email contains this go to the committees with the most free seats, ignoring preferences"
+              title="Waiting delegates whose school, reference or email contains this are seated only in the 3 committees with the most free seats — their first preference among those, otherwise the emptiest"
               disabled={running}
             />
             <button type="submit" className="btn-admin-secondary" disabled={running}>
