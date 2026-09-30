@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { RegistrationProfileDialog } from "@/components/admin/registration-profile-dialog";
 import {
   AttendanceCheck,
@@ -331,6 +332,12 @@ export function CountryMatrix({
                 </>
               )}
             </p>
+            <Link
+              href={`/admin/roll-call?committee=${active.id}`}
+              className="admin-action-chip"
+            >
+              Print roll call
+            </Link>
             <div className="admin-filters admin-country-matrix-filters">
               <div
                 className="admin-allotment-segmented"

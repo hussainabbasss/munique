@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CountryMatrix } from "@/components/admin/country-matrix";
 import {
@@ -47,6 +48,11 @@ export default async function CountriesPage({ searchParams }: Props) {
         are still left. A country counts as taken as soon as it is set on an
         allotment — pending or issued. Turn on attendance to tick delegates
         present committee by committee.
+      </p>
+      <p className="admin-panel-lead">
+        <Link href="/admin/roll-call" className="admin-action-chip">
+          Print roll call sheets
+        </Link>
       </p>
       <CountryMatrix
         committees={matrix}
