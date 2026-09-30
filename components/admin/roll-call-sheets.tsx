@@ -147,11 +147,16 @@ export function RollCallSheets({
       ) : (
         selected.map((committee) => (
           <section key={committee.id} className="rollcall-sheet">
+            <div className="rollcall-sheet-top">
+              <p className="rollcall-eyebrow">Munique 2026 · Roll call</p>
+              <p className="rollcall-powered">
+                <span>Powered by</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/system-summit.png" alt="System Summit" />
+              </p>
+            </div>
             <header className="rollcall-sheet-head">
-              <div>
-                <p className="rollcall-eyebrow">Munique 2026 · Roll call</p>
-                <h2 className="rollcall-committee">{committee.name}</h2>
-              </div>
+              <h2 className="rollcall-committee">{committee.name}</h2>
               <dl className="rollcall-meta">
                 <div>
                   <dt>Date</dt>
