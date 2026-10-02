@@ -169,6 +169,12 @@ export function CountryMatrix({
           </span>
           Attendance
         </button>
+        <Link
+          href="/admin/waivers"
+          className="admin-action-chip admin-country-matrix-waivers"
+        >
+          Print waivers
+        </Link>
         {attendanceOn && (
           <div className="register-segment" role="group" aria-label="Conference day">
             {ATTENDANCE_DAYS.map((option) => (

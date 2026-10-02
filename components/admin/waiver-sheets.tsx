@@ -1,0 +1,167 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import type { WaiverRow } from "@/lib/pdf/waivers";
+
+export type WaiverCommittee = {
+  id: string;
+  name: string;
+  rows: WaiverRow[];
+};
+
+type Props = {
+  committees: WaiverCommittee[];
+  initialCommitteeId: string;
+};
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * Delegate waivers: one A5 page per allotted delegate, for one committee or
+ * all of them. Any single form can be previewed before downloading.
+ */
+export function WaiverSheets({ committees, initialCommitteeId }: Props) {
+  const [committeeId, setCommitteeId] = useState(
+    committees.some((c) => c.id === initialCommitteeId)
+      ? initialCommitteeId
+      : "all",
+  );
+  const [downloading, setDownloading] = useState(false);
+
+  const rows = useMemo(
+    () =>
+      committeeId === "all"
+        ? committees.flatMap((c) => c.rows)
+        : (committees.find((c) => c.id === committeeId)?.rows ?? []),
+    [committees, committeeId],
+  );
+  const total = committees.reduce((sum, c) => sum + c.rows.length, 0);
+
+  /** Opens one delegate's waiver in a new tab, in the browser's PDF viewer. */
+  async function onPreview(row: WaiverRow) {
+    // Open the tab now, inside the click, so pop-up blockers allow it
+    const tab = window.open("", "_blank");
+    try {
+      const { buildWaiversPdf } = await import("@/lib/pdf/waivers");
+      const doc = await buildWaiversPdf([row]);
+      const url = URL.createObjectURL(doc.output("blob"));
+      if (tab) tab.location.href = url;
+      else window.open(url, "_blank");
+    } catch (error) {
+      console.error(error);
+      tab?.close();
+      alert("Could not build the preview. Please try again.");
+    }
+  }
+
+  async function onDownload() {
+    if (!rows.length) return;
+    const selected = committees.find((c) => c.id === committeeId);
+    setDownloading(true);
+    try {
+      const { buildWaiversPdf } = await import("@/lib/pdf/waivers");
+      const doc = await buildWaiversPdf(rows);
+      doc.save(
+        `munique-waivers-${selected ? slugify(selected.name) : "all-committees"}.pdf`,
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Could not build the PDF. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <div className="rollcall">
+      <div className="rollcall-controls">
+        <Link href="/admin/countries" className="rollcall-back">
+          ← Country matrix
+        </Link>
+        <h1 className="rollcall-controls-title">Print waivers</h1>
+
+        <div className="rollcall-fields">
+          <label className="rollcall-field">
+            <span>Committee</span>
+            <select
+              value={committeeId}
+              onChange={(event) => setCommitteeId(event.target.value)}
+            >
+              <option value="all">All committees ({total})</option>
+              {committees.map((committee) => (
+                <option key={committee.id} value={committee.id}>
+                  {committee.name} ({committee.rows.length})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className="rollcall-print"
+            disabled={rows.length === 0 || downloading}
+            onClick={onDownload}
+          >
+            {downloading
+              ? "Building PDF…"
+              : `Download ${rows.length} waiver${rows.length === 1 ? "" : "s"}`}
+          </button>
+        </div>
+
+        <p className="rollcall-hint">
+          One A5 page per allotted delegate (pending or issued), A–Z by name,
+          with their phone, email, committee and institute printed. Delegates
+          sign the undertaking and write their CNIC by hand.
+        </p>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="rollcall-empty">
+          No delegates are allotted in this committee yet.
+        </p>
+      ) : (
+        <div className="waivers-list">
+          <p className="waivers-list-title">
+            {rows.length} waiver{rows.length === 1 ? "" : "s"} in this PDF
+          </p>
+          <table className="rollcall-table">
+            <thead>
+              <tr>
+                <th className="rollcall-num">#</th>
+                <th>Delegate</th>
+                <th>Committee</th>
+                <th>Institute</th>
+                <th className="waivers-action-col" aria-label="Preview" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={`${row.code}-${row.name}-${index}`}>
+                  <td className="rollcall-num">{index + 1}</td>
+                  <td className="rollcall-country">{row.name}</td>
+                  <td>{row.committee}</td>
+                  <td>{row.institute}</td>
+                  <td className="waivers-action-col">
+                    <button
+                      type="button"
+                      className="waivers-preview-button"
+                      onClick={() => onPreview(row)}
+                    >
+                      Preview
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

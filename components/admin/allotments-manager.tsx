@@ -14,6 +14,8 @@ import {
 import { CountryPicker } from "@/components/admin/country-picker";
 import { RegistrationProfileDialog } from "@/components/admin/registration-profile-dialog";
 import {
+  AllottedDelegatesExcelButton,
+  AllottedDelegatesPdfButton,
   FormStudentsExcelButton,
   FormStudentsPdfButton,
 } from "@/components/admin/form-import-panel";
@@ -334,11 +336,19 @@ export function AllotmentsManager({
                   onChange={(event) => setFillGroup(event.target.value)}
                   disabled={running}
                 />
+
+                <div className="admin-engine-options-section">
+                  <p className="admin-engine-options-title">Exports</p>
+                  <div className="admin-engine-options-exports">
+                    <FormStudentsExcelButton />
+                    <FormStudentsPdfButton />
+                    <AllottedDelegatesExcelButton />
+                    <AllottedDelegatesPdfButton />
+                  </div>
+                </div>
               </div>
             </details>
           </form>
-          <FormStudentsExcelButton />
-          <FormStudentsPdfButton />
           {canIssue && (
             <button
               type="button"

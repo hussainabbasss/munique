@@ -10,6 +10,10 @@ import {
   previewFormImportAction,
   type FormImportPreview,
 } from "@/lib/admin/actions/form-import";
+import {
+  allottedDelegatesPdfRowsAction,
+  exportAllottedDelegatesExcelAction,
+} from "@/lib/admin/actions/exports";
 
 type Props = {
   canImport: boolean;
@@ -366,6 +370,77 @@ export function FormStudentsPdfButton() {
         title="Google Form students with MUN number, committee and allotment, as a PDF"
       >
         {pending ? "Building…" : "Form students (PDF)"}
+      </button>
+      {error && <span className="admin-toast admin-toast-error">{error}</span>}
+    </>
+  );
+}
+
+/** Every allotted delegate (any source) with all the data we hold on them. */
+export function AllottedDelegatesExcelButton() {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const onClick = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await exportAllottedDelegatesExcelAction();
+      if (result.ok) downloadBase64(result.base64, result.filename);
+      else setError(result.error);
+    });
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="btn-admin-secondary"
+        disabled={pending}
+        onClick={onClick}
+        title="Every delegate with a committee and country — contact, registration, preferences, allotment and attendance"
+      >
+        {pending ? "Building…" : "All allotted delegates (Excel)"}
+      </button>
+      {error && <span className="admin-toast admin-toast-error">{error}</span>}
+    </>
+  );
+}
+
+/** Every allotted delegate as a landscape PDF (Munique + System Summit). */
+export function AllottedDelegatesPdfButton() {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const onClick = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await allottedDelegatesPdfRowsAction();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      try {
+        const { downloadAllottedDelegatesPdf } = await import(
+          "@/lib/pdf/allotted-delegates"
+        );
+        await downloadAllottedDelegatesPdf(result.rows);
+      } catch (err) {
+        console.error(err);
+        setError("Could not build the PDF.");
+      }
+    });
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="btn-admin-secondary"
+        disabled={pending}
+        onClick={onClick}
+        title="Every delegate with a committee and country — MUN number, contact, institute and allotment, as a PDF"
+      >
+        {pending ? "Building…" : "All allotted delegates (PDF)"}
       </button>
       {error && <span className="admin-toast admin-toast-error">{error}</span>}
     </>

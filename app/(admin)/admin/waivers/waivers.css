@@ -1,0 +1,44 @@
+/* Waivers — builds on the roll-call page styles (roll-call.css) */
+
+.waivers-list {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+  overflow-x: auto;
+}
+
+.waivers-list-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--rc-ink);
+}
+
+.waivers-list .rollcall-table td {
+  height: 2.25rem;
+}
+
+.rollcall-table .waivers-action-col {
+  width: 1%;
+  text-align: right;
+}
+
+.waivers-preview-button {
+  padding: 0.3rem 0.75rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rc-accent);
+  background: #fff;
+  border: 1px solid #c9b6dc;
+  cursor: pointer;
+}
+
+.waivers-preview-button:hover {
+  background: #f6f0fb;
+  border-color: var(--rc-accent);
+}
