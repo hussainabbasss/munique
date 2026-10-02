@@ -33,14 +33,15 @@ async function loadImage(src: string): Promise<LoadedImage> {
 }
 
 /**
- * A4 allotment list of the Google Form delegates: Munique seal on top,
+ * A4 allotment list of the Google Form delegates: Munique × AMHSS on top,
  * System Summit at the side, then MUN number, name, committee and country.
  */
 export async function downloadFormStudentsPdf(rows: FormStudentPdfRow[]) {
-  const [{ jsPDF }, { autoTable }, seal, summit] = await Promise.all([
+  const [{ jsPDF }, { autoTable }, seal, school, summit] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
     loadImage("/logo.png"),
+    loadImage("/amhss.png"),
     loadImage("/system-summit.png"),
   ]);
 
@@ -55,10 +56,46 @@ export async function downloadFormStudentsPdf(rows: FormStudentPdfRow[]) {
   });
   const allotted = rows.filter((row) => row.committee && row.country).length;
 
+  /** Munique seal × AMHSS crest, `size` tall; returns the lockup width. */
+  const drawLockup = (x: number, y: number, size: number, measure = false) => {
+    // The seal PNG has padding round the art; scale it up to match the crest
+    const sealSize = size * 1.14;
+    const crestW = (size * school.width) / school.height;
+    const gap = size * 0.12;
+    const cross = size * 0.14;
+    const width = sealSize + gap * 2 + cross + crestW;
+    if (measure) return width;
+
+    const sealY = y - (sealSize - size) / 2;
+    doc.addImage(seal.data, "PNG", x, sealY, sealSize, sealSize, "seal", "FAST");
+    const cx = x + sealSize + gap;
+    const cy = y + size / 2 - cross / 2;
+    doc.setDrawColor(...GOLD);
+    doc.setLineWidth(Math.max(0.3, size * 0.018));
+    doc.setLineCap("round");
+    doc.line(cx, cy, cx + cross, cy + cross);
+    doc.line(cx + cross, cy, cx, cy + cross);
+    doc.setLineCap("butt");
+    doc.addImage(
+      school.data,
+      "PNG",
+      cx + cross + gap,
+      y,
+      crestW,
+      size,
+      "amhss",
+      "FAST",
+    );
+    return width;
+  };
+
   // ── First-page masthead ──
-  const sealSize = 30;
-  const sealX = (pageW - sealSize) / 2;
-  doc.addImage(seal.data, "PNG", sealX, 10, sealSize, sealSize, "seal", "FAST");
+  const lockupSize = 30;
+  drawLockup(
+    (pageW - drawLockup(0, 0, lockupSize, true)) / 2,
+    10,
+    lockupSize,
+  );
 
   const summitW = 40;
   const summitH = (summitW * summit.height) / summit.width;
@@ -165,11 +202,11 @@ export async function downloadFormStudentsPdf(rows: FormStudentPdfRow[]) {
     didDrawPage: (data) => {
       // Slim running header on continuation pages
       if (data.pageNumber > 1) {
-        doc.addImage(seal.data, "PNG", MARGIN, 7, 11, 11, "seal", "FAST");
+        const lockupW = drawLockup(MARGIN, 7, 11);
         doc.setFont("times", "bold");
         doc.setFontSize(12);
         doc.setTextColor(...NAVY);
-        doc.text("Delegate Allotments", MARGIN + 14, 14);
+        doc.text("Delegate Allotments", MARGIN + lockupW + 4, 14);
         const smallW = 24;
         doc.addImage(
           summit.data,

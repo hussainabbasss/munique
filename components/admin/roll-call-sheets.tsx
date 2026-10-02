@@ -294,7 +294,16 @@ export function RollCallSheets({
         selected.map((committee) => (
           <section key={committee.id} className="rollcall-sheet">
             <div className="rollcall-sheet-top">
-              <p className="rollcall-eyebrow">Munique 2026 · Roll call</p>
+              <div className="rollcall-brand">
+                <div className="rollcall-lockup">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo.png" alt="Munique" />
+                  <span className="rollcall-cross" aria-hidden="true" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/amhss.png" alt="AMHSS" />
+                </div>
+                <p className="rollcall-eyebrow">Munique 2026 · Roll call</p>
+              </div>
               <p className="rollcall-powered">
                 <span>Powered by</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}

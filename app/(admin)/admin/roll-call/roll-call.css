@@ -153,6 +153,57 @@
   margin-bottom: 0.25rem;
 }
 
+.rollcall-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.rollcall-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rollcall-lockup img {
+  display: block;
+  height: 3rem;
+  width: auto;
+}
+
+/* The seal PNG has padding round the art; scale it up to match the crest */
+.rollcall-lockup img:first-child {
+  height: 3.4rem;
+  margin: -0.2rem 0;
+}
+
+/* Thin gold × between the two crests */
+.rollcall-cross {
+  position: relative;
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.rollcall-cross::before,
+.rollcall-cross::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -15%;
+  width: 130%;
+  height: 1.5px;
+  border-radius: 1px;
+  background: #b4922e;
+}
+
+.rollcall-cross::before {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.rollcall-cross::after {
+  transform: translateY(-50%) rotate(-45deg);
+}
+
 .rollcall-powered {
   display: inline-flex;
   align-items: center;
