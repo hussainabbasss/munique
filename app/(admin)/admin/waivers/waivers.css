@@ -42,3 +42,10 @@
   background: #f6f0fb;
   border-color: var(--rc-accent);
 }
+
+/* Secondary download — outlined version of the roll-call button */
+.rollcall-print.waivers-print-alt {
+  color: var(--rc-accent);
+  background: #fff;
+  box-shadow: inset 0 0 0 1.5px var(--rc-accent);
+}

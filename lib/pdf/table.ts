@@ -9,6 +9,7 @@ import {
   drawLockup,
   drawSummit,
   loadBrandImages,
+  spacedText,
 } from "@/lib/pdf/brand";
 
 const MARGIN = 14;
@@ -57,10 +58,7 @@ export async function downloadTablePdf(spec: TablePdf) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.5);
   doc.setTextColor(...MUTED);
-  doc.text("POWERED BY", summitX + summitW / 2, 18, {
-    align: "center",
-    charSpace: 0.6,
-  });
+  spacedText(doc, "POWERED BY", summitX + summitW / 2, 18, 0.6, "center");
   drawSummit(doc, images, summitX, 19, summitW);
 
   doc.setFontSize(7.5);

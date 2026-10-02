@@ -116,6 +116,47 @@ export function drawSummit(
   return height;
 }
 
+/**
+ * Letter-spaced text. jsPDF ignores `charSpace` when it aligns, which pushes
+ * centred and right-aligned spaced text off its anchor — measure it here.
+ */
+export function spacedText(
+  doc: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  charSpace: number,
+  align: "left" | "center" | "right" = "left",
+) {
+  const width = doc.getTextWidth(text) + charSpace * (text.length - 1);
+  const left =
+    align === "center" ? x - width / 2 : align === "right" ? x - width : x;
+  doc.text(text, left, y, { charSpace });
+  return width;
+}
+
+/** "POWERED BY  [System Summit]" centred on `cx`, logo `logoW` mm wide. */
+export function drawPoweredBy(
+  doc: jsPDF,
+  images: BrandImages,
+  cx: number,
+  y: number,
+  logoW: number,
+  fontSize = 5.8,
+) {
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(fontSize);
+  doc.setTextColor(...MUTED);
+  const charSpace = 0.5;
+  const label = "POWERED BY";
+  const labelW = doc.getTextWidth(label) + charSpace * (label.length - 1);
+  const gap = 3;
+  const logoH = (logoW * images.summit.height) / images.summit.width;
+  const left = cx - (labelW + gap + logoW) / 2;
+  doc.text(label, left, y + logoH / 2 + fontSize * 0.13, { charSpace });
+  drawSummit(doc, images, left + labelW + gap, y, logoW);
+}
+
 /** Gold double rule across the page. */
 export function drawGoldRule(doc: jsPDF, x1: number, x2: number, y: number) {
   doc.setDrawColor(...GOLD);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { WaiverRow } from "@/lib/pdf/waivers";
+import type { WaiverLayout, WaiverRow } from "@/lib/pdf/waivers";
 
 export type WaiverCommittee = {
   id: string;
@@ -32,7 +32,7 @@ export function WaiverSheets({ committees, initialCommitteeId }: Props) {
       ? initialCommitteeId
       : "all",
   );
-  const [downloading, setDownloading] = useState(false);
+  const [downloading, setDownloading] = useState<WaiverLayout | null>(null);
 
   const rows = useMemo(
     () =>
@@ -60,21 +60,22 @@ export function WaiverSheets({ committees, initialCommitteeId }: Props) {
     }
   }
 
-  async function onDownload() {
+  async function onDownload(layout: WaiverLayout) {
     if (!rows.length) return;
     const selected = committees.find((c) => c.id === committeeId);
-    setDownloading(true);
+    setDownloading(layout);
     try {
       const { buildWaiversPdf } = await import("@/lib/pdf/waivers");
-      const doc = await buildWaiversPdf(rows);
+      const doc = await buildWaiversPdf(rows, layout);
+      const scope = selected ? slugify(selected.name) : "all-committees";
       doc.save(
-        `munique-waivers-${selected ? slugify(selected.name) : "all-committees"}.pdf`,
+        `munique-waivers-${scope}${layout === "a4-pair" ? "-a4" : ""}.pdf`,
       );
     } catch (error) {
       console.error(error);
       alert("Could not build the PDF. Please try again.");
     } finally {
-      setDownloading(false);
+      setDownloading(null);
     }
   }
 
@@ -105,19 +106,32 @@ export function WaiverSheets({ committees, initialCommitteeId }: Props) {
           <button
             type="button"
             className="rollcall-print"
-            disabled={rows.length === 0 || downloading}
-            onClick={onDownload}
+            disabled={rows.length === 0 || downloading !== null}
+            onClick={() => onDownload("a5")}
           >
-            {downloading
+            {downloading === "a5"
               ? "Building PDF…"
-              : `Download ${rows.length} waiver${rows.length === 1 ? "" : "s"}`}
+              : `Download ${rows.length} waiver${rows.length === 1 ? "" : "s"} · A5`}
+          </button>
+          <button
+            type="button"
+            className="rollcall-print waivers-print-alt"
+            disabled={rows.length === 0 || downloading !== null}
+            onClick={() => onDownload("a4-pair")}
+            title="Two waivers side by side on landscape A4 — print, then cut down the dashed line"
+          >
+            {downloading === "a4-pair"
+              ? "Building PDF…"
+              : `A4 · 2 per page (${Math.ceil(rows.length / 2)} sheet${Math.ceil(rows.length / 2) === 1 ? "" : "s"})`}
           </button>
         </div>
 
         <p className="rollcall-hint">
-          One A5 page per allotted delegate (pending or issued), A–Z by name,
+          One waiver per allotted delegate (pending or issued), A–Z by name,
           with their phone, email, committee and institute printed. Delegates
-          sign the undertaking and write their CNIC by hand.
+          sign the undertaking and write their CNIC by hand. A5 prints one per
+          page; A4 puts two side by side on a landscape sheet with a dashed
+          cut line down the middle.
         </p>
       </div>
 
