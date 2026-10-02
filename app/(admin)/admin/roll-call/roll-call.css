@@ -278,6 +278,15 @@
   color: var(--rc-muted);
 }
 
+/* ── PDF capture (class set only while the PDF is being built) ── */
+
+.rollcall-exporting .rollcall-sheet {
+  width: var(--rc-export-width);
+  max-width: none;
+  overflow: visible;
+  box-shadow: none;
+}
+
 /* ── Print ── */
 
 @media print {
