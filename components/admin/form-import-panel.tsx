@@ -5,6 +5,7 @@ import {
   convertExcelToCsvAction,
   exportFormAllotmentsExcelAction,
   exportFormStudentsExcelAction,
+  formStudentsPdfRowsAction,
   importFormRegistrationsAction,
   previewFormImportAction,
   type FormImportPreview,
@@ -324,6 +325,47 @@ export function FormStudentsExcelButton() {
         title="Every student imported from the Google Form, with MUN code and allotment"
       >
         {pending ? "Building…" : "Form students (Excel)"}
+      </button>
+      {error && <span className="admin-toast admin-toast-error">{error}</span>}
+    </>
+  );
+}
+
+/** The same Google Form students as the Excel, as a printable allotment list. */
+export function FormStudentsPdfButton() {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const onClick = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await formStudentsPdfRowsAction();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      try {
+        const { downloadFormStudentsPdf } = await import(
+          "@/lib/form-import/students-pdf"
+        );
+        await downloadFormStudentsPdf(result.rows);
+      } catch (err) {
+        console.error(err);
+        setError("Could not build the PDF.");
+      }
+    });
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="btn-admin-secondary"
+        disabled={pending}
+        onClick={onClick}
+        title="Google Form students with MUN number, committee and allotment, as a PDF"
+      >
+        {pending ? "Building…" : "Form students (PDF)"}
       </button>
       {error && <span className="admin-toast admin-toast-error">{error}</span>}
     </>

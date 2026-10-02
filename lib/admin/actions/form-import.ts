@@ -555,16 +555,8 @@ type FormStudentRow = {
   }[];
 };
 
-/**
- * Every Google Form import with their MUN code and allotment — straight from
- * the database, no CSV needed.
- */
-export async function exportFormStudentsExcelAction(): Promise<
-  ActionResult<{ base64: string; filename: string; count: number }>
-> {
-  await requireAdminUser();
-  const supabase = await createClient();
-
+/** Every Google Form import with their allotment, A–Z by name. */
+async function loadFormStudents(supabase: Supabase) {
   const { data, error } = await supabase
     .from("registrations")
     .select(
@@ -578,9 +570,9 @@ export async function exportFormStudentsExcelAction(): Promise<
     )
     .eq("source", "form_import");
 
-  if (error) return { ok: false, error: error.message };
+  if (error) throw new Error(error.message);
 
-  const students = ((data ?? []) as unknown as FormStudentRow[])
+  return ((data ?? []) as unknown as FormStudentRow[])
     .flatMap((reg) =>
       reg.delegates.map((delegate) => ({
         reg,
@@ -598,6 +590,24 @@ export async function exportFormStudentsExcelAction(): Promise<
       })),
     )
     .sort((a, b) => a.delegate.full_name.localeCompare(b.delegate.full_name));
+}
+
+/**
+ * Every Google Form import with their MUN code and allotment — straight from
+ * the database, no CSV needed.
+ */
+export async function exportFormStudentsExcelAction(): Promise<
+  ActionResult<{ base64: string; filename: string; count: number }>
+> {
+  await requireAdminUser();
+  const supabase = await createClient();
+
+  let students: Awaited<ReturnType<typeof loadFormStudents>>;
+  try {
+    students = await loadFormStudents(supabase);
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
 
   if (!students.length) {
     return { ok: false, error: "No Google Form imports yet." };
@@ -653,4 +663,37 @@ export async function exportFormStudentsExcelAction(): Promise<
     base64: Buffer.from(buffer).toString("base64"),
     filename: `munique-form-students-${new Date().toISOString().slice(0, 10)}.xlsx`,
   };
+}
+
+export type FormStudentPdfRow = {
+  code: string;
+  name: string;
+  committee: string;
+  country: string;
+};
+
+/** The same Google Form students as the Excel, trimmed to what the PDF shows. */
+export async function formStudentsPdfRowsAction(): Promise<
+  ActionResult<{ rows: FormStudentPdfRow[] }>
+> {
+  await requireAdminUser();
+  const supabase = await createClient();
+
+  try {
+    const students = await loadFormStudents(supabase);
+    if (!students.length) {
+      return { ok: false, error: "No Google Form imports yet." };
+    }
+    return {
+      ok: true,
+      rows: students.map(({ delegate, info }) => ({
+        code: info.code,
+        name: delegate.full_name,
+        committee: info.committee,
+        country: info.country,
+      })),
+    };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
 }

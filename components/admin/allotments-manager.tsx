@@ -13,7 +13,10 @@ import {
 } from "@/lib/allotments/pending-email";
 import { CountryPicker } from "@/components/admin/country-picker";
 import { RegistrationProfileDialog } from "@/components/admin/registration-profile-dialog";
-import { FormStudentsExcelButton } from "@/components/admin/form-import-panel";
+import {
+  FormStudentsExcelButton,
+  FormStudentsPdfButton,
+} from "@/components/admin/form-import-panel";
 
 type DelegateRow = {
   id: string;
@@ -335,6 +338,7 @@ export function AllotmentsManager({
             </details>
           </form>
           <FormStudentsExcelButton />
+          <FormStudentsPdfButton />
           {canIssue && (
             <button
               type="button"
