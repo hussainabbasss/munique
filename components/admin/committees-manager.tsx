@@ -53,13 +53,14 @@ export function CommitteesManager({ committees }: Props) {
               <th>Study guide</th>
               <th>Guide enabled</th>
               <th>Published</th>
+              <th>Allotments</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {committees.length === 0 ? (
               <tr>
-                <td colSpan={8} className="admin-empty">
+                <td colSpan={9} className="admin-empty">
                   No committees yet
                 </td>
               </tr>
@@ -73,6 +74,7 @@ export function CommitteesManager({ committees }: Props) {
                   <td>{c.study_guide_path ? "Uploaded" : "—"}</td>
                   <td>{c.study_guide_enabled ? "Yes" : "No"}</td>
                   <td>{c.is_published ? "Yes" : "No"}</td>
+                  <td>{c.allotments_paused ? "Paused" : "Open"}</td>
                   <td>
                     <button
                       type="button"

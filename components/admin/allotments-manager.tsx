@@ -51,6 +51,7 @@ type Committee = {
   id: string;
   name: string;
   country_pool: string[];
+  allotments_paused: boolean;
 };
 
 type AwaitingRow = {
@@ -659,10 +660,16 @@ export function AllotmentsManager({
                   <option value="">Select committee</option>
                   {committees.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {c.allotments_paused ? `${c.name} (paused)` : c.name}
                     </option>
                   ))}
                 </select>
+                {committeeById.get(editCommitteeId)?.allotments_paused && (
+                  <p className="admin-field-hint">
+                    Auto-allotment is paused here. Saving still places this
+                    delegate.
+                  </p>
+                )}
               </div>
               <div className="admin-field">
                 <label htmlFor="country">Country</label>
@@ -763,10 +770,16 @@ export function AllotmentsManager({
                       <option value="">Select committee</option>
                       {committees.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.name}
+                          {c.allotments_paused ? `${c.name} (paused)` : c.name}
                         </option>
                       ))}
                     </select>
+                    {committeeById.get(editCommitteeId)?.allotments_paused && (
+                      <p className="admin-field-hint">
+                        Auto-allotment is paused here. Changing still places this
+                        delegate.
+                      </p>
+                    )}
                   </div>
                   <div className="admin-field">
                     <label htmlFor="change_country">New country</label>

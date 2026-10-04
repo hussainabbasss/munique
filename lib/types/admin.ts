@@ -51,6 +51,7 @@ export type Committee = {
   logo_path: string | null;
   display_order: number;
   is_published: boolean;
+  allotments_paused: boolean;
   country_pool: string[];
   created_at: string;
   updated_at: string;

@@ -244,7 +244,8 @@ export function CountryMatrix({
             className={`admin-allotment-segment${activeId === committee.id ? " admin-allotment-segment-active" : ""}`}
             onClick={() => openCommittee(committee.id)}
           >
-            {committee.name} ({committee.left} left)
+            {committee.name} ({committee.left} left
+            {committee.allotmentsPaused ? ", paused" : ""})
           </button>
         ))}
       </div>
@@ -280,6 +281,11 @@ export function CountryMatrix({
                       {!committee.isPublished && (
                         <span className="admin-badge admin-country-matrix-tag">
                           Unpublished
+                        </span>
+                      )}
+                      {committee.allotmentsPaused && (
+                        <span className="admin-badge admin-country-matrix-tag">
+                          Paused
                         </span>
                       )}
                       {committee.offPool > 0 && (

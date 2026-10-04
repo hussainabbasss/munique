@@ -31,7 +31,7 @@ export async function runMeritEngineAction(formData?: FormData) {
         .eq("payment_status", "confirmed"),
       supabase
         .from("committees")
-        .select("id, name, agenda, difficulty_tier, country_pool")
+        .select("id, name, agenda, difficulty_tier, country_pool, allotments_paused")
         .eq("is_published", true)
         .order("display_order"),
     ]);
@@ -51,12 +51,13 @@ export async function runMeritEngineAction(formData?: FormData) {
   const committees = publishedCommittees.map((committee) => ({
     ...committee,
     country_pool: committee.country_pool ?? [],
+    allotments_paused: Boolean(committee.allotments_paused),
   }));
 
-  if (!committees.some((c) => (c.country_pool?.length ?? 0) > 0)) {
+  if (!committees.some((c) => !c.allotments_paused && (c.country_pool?.length ?? 0) > 0)) {
     return {
       error:
-        "No published committees with an allotment pool — add allotments on each committee first.",
+        "No open committees with an allotment pool — resume a paused committee or assign seats manually.",
     };
   }
 

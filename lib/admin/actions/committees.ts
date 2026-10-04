@@ -72,6 +72,7 @@ export async function saveCommitteeAction(formData: FormData) {
   const difficultyTier = String(formData.get("difficulty_tier") ?? "medium");
   const displayOrder = parseInt(String(formData.get("display_order") ?? "0"), 10);
   const isPublished = formData.get("is_published") === "on";
+  const allotmentsPaused = formData.get("allotments_paused") === "on";
   const studyGuideEnabled = formData.get("study_guide_enabled") === "on";
   const countryPoolRaw = String(formData.get("country_pool") ?? "");
 
@@ -94,6 +95,7 @@ export async function saveCommitteeAction(formData: FormData) {
     difficulty_tier: difficultyTier,
     display_order: displayOrder,
     is_published: isPublished,
+    allotments_paused: allotmentsPaused,
     study_guide_enabled: studyGuideEnabled,
     country_pool: parsedPool.pool,
     updated_at: new Date().toISOString(),
@@ -113,6 +115,8 @@ export async function saveCommitteeAction(formData: FormData) {
   }
 
   revalidatePath("/admin/committees");
+  revalidatePath("/admin/allotments");
+  revalidatePath("/admin/countries");
   revalidatePath("/committees");
   revalidatePath("/secretariat");
   return { success: "Committee saved" };

@@ -205,7 +205,9 @@ export function assignSeats(params: {
   const { people, scores, committees, takenSeats } = params;
   const byId = new Map(committees.map((c) => [c.id, c]));
   const free = (c: MeritCommittee) =>
-    freeCommitteeSeats(c.id, c.country_pool, takenSeats);
+    c.allotments_paused
+      ? []
+      : freeCommitteeSeats(c.id, c.country_pool, takenSeats);
 
   const ordered = [...people].sort(
     (a, b) =>
@@ -225,11 +227,14 @@ export function assignSeats(params: {
 
     const open = committees.filter((c) => free(c).length > 0);
     if (!open.length) {
+      const anyPaused = committees.some((c) => c.allotments_paused);
       return {
         ok: false,
         person,
         merit_score: merit,
-        reason: "No free seats left in any published committee — set manually.",
+        reason: anyPaused
+          ? "No free seats left in open committees (some are paused) — set manually."
+          : "No free seats left in any published committee — set manually.",
       };
     }
 

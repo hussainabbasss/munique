@@ -36,7 +36,7 @@ export default async function AllotmentsPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("committees")
-      .select("id, name, country_pool")
+      .select("id, name, country_pool, allotments_paused")
       .eq("is_published", true)
       .order("display_order"),
     supabase
@@ -112,6 +112,7 @@ export default async function AllotmentsPage() {
         committees={(committees ?? []).map((committee) => ({
           ...committee,
           country_pool: committee.country_pool ?? [],
+          allotments_paused: Boolean(committee.allotments_paused),
         }))}
         awaiting={awaiting}
         pendingEmailCount={pendingEmailCount}

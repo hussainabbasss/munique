@@ -4,6 +4,8 @@ export type MeritCommittee = {
   agenda: string;
   difficulty_tier: "low" | "medium" | "high";
   country_pool: string[];
+  /** Merit engine skips this committee; manual assignment still allowed. */
+  allotments_paused?: boolean;
 };
 
 export type MeritDelegateInput = {

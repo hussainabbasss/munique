@@ -23,6 +23,7 @@ export type CommitteeMatrix = {
   id: string;
   name: string;
   isPublished: boolean;
+  allotmentsPaused: boolean;
   seats: CountrySeat[];
   total: number;
   taken: number;
@@ -34,6 +35,7 @@ export type MatrixCommitteeInput = {
   id: string;
   name: string;
   is_published: boolean;
+  allotments_paused?: boolean;
   country_pool: string[] | null;
 };
 
@@ -127,6 +129,7 @@ export function buildCountryMatrix(
       id: committee.id,
       name: committee.name,
       isPublished: committee.is_published,
+      allotmentsPaused: Boolean(committee.allotments_paused),
       seats,
       total,
       taken,

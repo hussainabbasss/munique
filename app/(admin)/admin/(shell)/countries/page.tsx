@@ -23,7 +23,7 @@ export default async function CountriesPage({ searchParams }: Props) {
   ] = await Promise.all([
     supabase
       .from("committees")
-      .select("id, name, is_published, country_pool")
+      .select("id, name, is_published, country_pool, allotments_paused")
       .order("display_order"),
     supabase
       .from("allotments")

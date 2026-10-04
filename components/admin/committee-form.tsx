@@ -101,6 +101,19 @@ export function CommitteeForm({ committee, onDone }: Props) {
         </div>
         <div className="admin-checkbox-row">
           <input
+            id="allotments_paused"
+            name="allotments_paused"
+            type="checkbox"
+            defaultChecked={committee?.allotments_paused ?? false}
+          />
+          <label htmlFor="allotments_paused">Pause allotments</label>
+        </div>
+        <p className="admin-field-hint">
+          The merit engine will not give out remaining seats in this committee.
+          You can still place someone here with Set allotment or Change allotment.
+        </p>
+        <div className="admin-checkbox-row">
+          <input
             id="study_guide_enabled"
             name="study_guide_enabled"
             type="checkbox"
