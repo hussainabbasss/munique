@@ -31,7 +31,7 @@ export async function runMeritEngineAction(formData?: FormData) {
         .eq("payment_status", "confirmed"),
       supabase
         .from("committees")
-        .select("id, name, agenda, difficulty_tier, country_pool, allotments_paused")
+        .select("id, name, slug, agenda, difficulty_tier, country_pool, allotments_paused")
         .eq("is_published", true)
         .order("display_order"),
     ]);
@@ -125,6 +125,7 @@ export async function runMeritEngineAction(formData?: FormData) {
             fillNeedle &&
               `${groupText} ${delegate.email ?? ""}`.toLowerCase().includes(fillNeedle),
           ),
+        formImport: reg.source === "form_import",
       });
     }
   }

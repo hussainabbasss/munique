@@ -1,6 +1,7 @@
 export type MeritCommittee = {
   id: string;
   name: string;
+  slug?: string;
   agenda: string;
   difficulty_tier: "low" | "medium" | "high";
   country_pool: string[];

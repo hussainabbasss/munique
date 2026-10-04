@@ -19,9 +19,10 @@ import type {
  *    high-difficulty committee and their merit is low, then later preferences.
  *    Within a committee the next free country in pool order is taken, so the
  *    pool's order decides which seats go to the strongest delegates.
- * 3. People in a "fill" group are seated only in the 3 committees with the
- *    most free seats: their first preference among those (UNSC → PNA skips
- *    UNSC if it is not one of them), otherwise the emptiest of the three.
+ * 3. Google Form imports are remapped: a UN preference (UNSC, UNCSW, UNHRC,
+ *    SPECPOL, DISEC) seats only in UNHRC / DISEC / UNCSW; a PNA or PAC
+ *    preference seats only in PAC. The optional fill group still applies to
+ *    everyone else.
  */
 
 const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
@@ -35,7 +36,60 @@ const FILL_COMMITTEES = 3;
 export type EnginePerson = MeritDelegateInput & {
   /** Seat by most free seats instead of preferences */
   fill: boolean;
+  /** Google Form import — uses the UN / PAC remap below */
+  formImport?: boolean;
 };
+
+const UN_PREF_CODES = new Set(["UNSC", "UNCSW", "UNHRC", "SPECPOL", "DISEC"]);
+const UN_SEAT_CODES = new Set(["UNHRC", "DISEC", "UNCSW"]);
+const PAC_PREF_CODES = new Set(["PNA", "PAC"]);
+
+function compactCommitteeLabel(value: string) {
+  return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "");
+}
+
+/** Short code from the committee name or slug (UNSC, PAC, …). */
+export function committeeCode(committee: MeritCommittee): string | null {
+  const slug = compactCommitteeLabel(committee.slug ?? "");
+  const name = compactCommitteeLabel(committee.name);
+  const parens = [...committee.name.matchAll(/\(([^)]+)\)/g)].map((match) =>
+    compactCommitteeLabel(match[1]),
+  );
+  const keys = new Set([slug, name, ...parens].filter(Boolean));
+
+  const aliases: [string, string[]][] = [
+    ["UNSC", ["unsc"]],
+    ["UNCSW", ["uncsw"]],
+    ["UNHRC", ["unhrc"]],
+    ["SPECPOL", ["specpol"]],
+    ["DISEC", ["disec"]],
+    ["PNA", ["pna"]],
+    ["PAC", ["pac"]],
+  ];
+  for (const [code, names] of aliases) {
+    if (names.some((alias) => keys.has(alias))) return code;
+  }
+
+  if (name.includes("securitycouncil")) return "UNSC";
+  if (name.includes("statusofwomen") || name.includes("unwomen")) return "UNCSW";
+  if (name.includes("humanrights")) return "UNHRC";
+  if (name.includes("specialpolitical")) return "SPECPOL";
+  if (name.includes("disarmament")) return "DISEC";
+  if (name.includes("nationalassembly")) return "PNA";
+  if (name.includes("affairscabinet") || name.includes("pakistanaffairs")) {
+    return "PAC";
+  }
+  return null;
+}
+
+function formImportLane(prefs: MeritCommittee[]): "un" | "pac" | null {
+  for (const pref of prefs) {
+    const code = committeeCode(pref);
+    if (code && UN_PREF_CODES.has(code)) return "un";
+    if (code && PAC_PREF_CODES.has(code)) return "pac";
+  }
+  return null;
+}
 
 export type ScoreSource = "gemini" | "heuristic";
 
@@ -241,7 +295,48 @@ export function assignSeats(params: {
     let committee: MeritCommittee;
     let why: string;
 
-    if (person.fill) {
+    const importLane = person.formImport ? formImportLane(prefs) : null;
+    if (importLane === "un") {
+      const allowed = committees.filter((c) => {
+        const code = committeeCode(c);
+        return Boolean(code && UN_SEAT_CODES.has(code));
+      });
+      const openAllowed = allowed.filter((c) => free(c).length > 0);
+      if (!openAllowed.length) {
+        return {
+          ok: false,
+          person,
+          merit_score: merit,
+          reason:
+            "Form import UN preference — UNHRC, DISEC and UNCSW are full or paused. Set manually.",
+        };
+      }
+      const openPrefs = prefs.filter((pref) =>
+        openAllowed.some((c) => c.id === pref.id),
+      );
+      const suitable = openPrefs.find(
+        (c) => c.difficulty_tier !== "high" || merit >= HIGH_DIFFICULTY_MIN_SCORE,
+      );
+      committee = suitable ?? openPrefs[0] ?? [...openAllowed].sort(
+        (a, b) => free(b).length - free(a).length,
+      )[0];
+      why = openPrefs.some((pref) => pref.id === committee.id)
+        ? `Form import — UN preference remapped to ${committee.name} (UNHRC / DISEC / UNCSW).`
+        : `Form import — UN preference; no open pick among UNHRC / DISEC / UNCSW, placed in ${committee.name}.`;
+    } else if (importLane === "pac") {
+      const pac = committees.find((c) => committeeCode(c) === "PAC");
+      if (!pac || free(pac).length === 0) {
+        return {
+          ok: false,
+          person,
+          merit_score: merit,
+          reason:
+            "Form import PNA/PAC preference — PAC is full or paused. Set manually.",
+        };
+      }
+      committee = pac;
+      why = "Form import — PNA/PAC preference seated in PAC.";
+    } else if (person.fill) {
       // Only the emptiest committees count; preferences choose among them
       const emptiest = [...open]
         .sort((a, b) => free(b).length - free(a).length)
