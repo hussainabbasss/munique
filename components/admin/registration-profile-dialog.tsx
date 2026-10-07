@@ -36,39 +36,38 @@ export function RegistrationProfileDialog({
   paymentStatus,
   footer,
 }: Props) {
-  const [profile, setProfile] = useState<RegistrationProfile | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Keyed by uuid so a result for a previous registration is never shown;
+  // loading is simply "no result yet for this uuid".
+  const [loaded, setLoaded] = useState<{
+    uuid: string;
+    profile: RegistrationProfile | null;
+    error: string | null;
+  } | null>(null);
 
   useEffect(() => {
-    if (!registrationUuid) {
-      setProfile(null);
-      setError(null);
-      setLoading(false);
-      return;
-    }
+    if (!registrationUuid) return;
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setProfile(null);
-
     void getRegistrationProfileAction(registrationUuid).then((result) => {
       if (cancelled) return;
-      setLoading(false);
-      if ("error" in result && result.error) {
-        setError(result.error);
-        return;
-      }
-      if ("profile" in result) {
-        setProfile(result.profile);
-      }
+      setLoaded({
+        uuid: registrationUuid,
+        profile: "profile" in result ? result.profile : null,
+        error: "error" in result && result.error ? result.error : null,
+      });
     });
 
     return () => {
       cancelled = true;
+      // Reopening shows "Loading…" and fresh data, never the last copy
+      setLoaded(null);
     };
   }, [registrationUuid]);
+
+  const current = loaded && loaded.uuid === registrationUuid ? loaded : null;
+  const loading = Boolean(registrationUuid) && !current;
+  const profile = current?.profile ?? null;
+  const error = current?.error ?? null;
 
   if (!registrationUuid) return null;
 
