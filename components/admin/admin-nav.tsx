@@ -15,6 +15,7 @@ const NAV: {
   { href: "/admin/registrations", label: "Registrations", section: "operations" },
   { href: "/admin/allotments", label: "Allotments", section: "operations", roles: ["admin", "reviewer"] },
   { href: "/admin/countries", label: "Country matrix", section: "operations", roles: ["admin", "reviewer"] },
+  { href: "/admin/references", label: "References", section: "operations", roles: ["admin", "reviewer"] },
   { href: "/admin/attendance", label: "Attendance", section: "operations" },
   { href: "/admin/queries", label: "Queries", section: "operations", roles: ["admin", "reviewer"] },
   { href: "/admin/pricing", label: "Pricing", section: "conference", roles: ["admin", "reviewer"] },

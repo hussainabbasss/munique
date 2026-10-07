@@ -266,7 +266,9 @@ export function CountryMatrix({
             <tbody>
               {committees.map((committee) => {
                 const percent = committee.total
-                  ? Math.round((committee.taken / committee.total) * 100)
+                  ? Math.round(
+                      ((committee.total - committee.left) / committee.total) * 100,
+                    )
                   : 0;
                 return (
                   <tr key={committee.id}>
@@ -335,7 +337,7 @@ export function CountryMatrix({
             <p className="admin-country-matrix-summary">
               <strong>{active.left}</strong> of {active.total} countries left ·{" "}
               {active.taken} taken
-              {active.offPool > 0 && ` · ${active.offPool} assigned off pool`}
+              {active.offPool > 0 && ` (incl. ${active.offPool} off pool)`}
               {attendanceOn && activePresence && (
                 <>
                   {" · "}
@@ -359,7 +361,7 @@ export function CountryMatrix({
                 {(
                   [
                     ["all", `All (${active.seats.length})`],
-                    ["taken", `Taken (${active.taken + active.offPool})`],
+                    ["taken", `Taken (${active.taken})`],
                     ["left", `Left (${active.left})`],
                     ...(attendanceOn
                       ? ([["absent", `Not in (${absentSeats})`]] as const)

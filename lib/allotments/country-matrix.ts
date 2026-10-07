@@ -121,9 +121,10 @@ export function buildCountryMatrix(
     }
 
     const total = poolKeys.size;
-    const taken = seats.filter(
+    const takenInPool = seats.filter(
       (seat) => seat.inPool && seat.holders.length > 0,
     ).length;
+    const offPool = seats.filter((seat) => !seat.inPool).length;
 
     return {
       id: committee.id,
@@ -132,9 +133,10 @@ export function buildCountryMatrix(
       allotmentsPaused: Boolean(committee.allotments_paused),
       seats,
       total,
-      taken,
-      left: total - taken,
-      offPool: seats.filter((seat) => !seat.inPool).length,
+      // Off-pool seats are still occupied countries, so they count as taken
+      taken: takenInPool + offPool,
+      left: total - takenInPool,
+      offPool,
     };
   });
 }

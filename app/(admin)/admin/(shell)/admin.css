@@ -2822,3 +2822,129 @@ a.admin-stat-card:hover {
   justify-content: center;
   text-align: center;
 }
+
+/* ── References ── */
+
+.admin-theme-root {
+  --admin-ref-1: #2a78d6;
+  --admin-ref-2: #eb6834;
+  --admin-ref-3: #1baf7a;
+  --admin-ref-4: #eda100;
+  --admin-ref-5: #e87ba4;
+  --admin-ref-6: #008300;
+  --admin-ref-7: #4a3aa7;
+  --admin-ref-other: color-mix(in oklab, var(--ink) 38%, transparent);
+  --admin-ref-none: color-mix(in oklab, var(--ink) 16%, transparent);
+}
+
+html[data-admin-boot-theme="dark"] .admin-theme-root:not([data-admin-theme-ready="true"]),
+.admin-theme-root[data-theme="dark"] {
+  --admin-ref-1: #3987e5;
+  --admin-ref-2: #d95926;
+  --admin-ref-3: #199e70;
+  --admin-ref-4: #c98500;
+  --admin-ref-5: #d55181;
+  --admin-ref-6: #008300;
+  --admin-ref-7: #9085e9;
+  --admin-ref-other: color-mix(in oklab, var(--on-dark) 42%, transparent);
+  --admin-ref-none: color-mix(in oklab, var(--on-dark) 18%, transparent);
+}
+
+.admin-ref-tab-count {
+  margin-left: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  opacity: 0.7;
+}
+
+.admin-ref-panel {
+  margin-top: 1.25rem;
+}
+
+.admin-ref-split {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .admin-ref-split {
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  }
+}
+
+.admin-ref-chart {
+  position: relative;
+  width: 100%;
+  max-width: 20rem;
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+
+.admin-ref-chart-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.admin-ref-chart-total {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 500;
+  color: var(--admin-text);
+}
+
+.admin-ref-chart-caption {
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+}
+
+.admin-ref-legend {
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.admin-ref-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.admin-ref-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0;
+  font: inherit;
+  color: var(--admin-text);
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.admin-ref-name:hover {
+  text-decoration: underline;
+}
+
+.admin-ref-swatch {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.admin-ref-row-active td {
+  background: var(--admin-row-hover);
+}
+
+.admin-ref-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
