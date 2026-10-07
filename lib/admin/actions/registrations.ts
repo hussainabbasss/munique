@@ -160,6 +160,26 @@ export async function rejectPaymentAction(registrationId: string) {
   return { success: "Payment rejected" };
 }
 
+/** Back to pending so payment can be confirmed again. Sends no email — confirming does. */
+export async function restorePaymentAction(registrationId: string) {
+  await requireAdminUser();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("registrations")
+    .update({ payment_status: "pending" })
+    .eq("id", registrationId)
+    .eq("payment_status", "rejected")
+    .select("id");
+
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "Registration not found or not rejected." };
+
+  revalidatePath("/admin/registrations");
+  revalidatePath("/admin");
+  return { success: "Registration restored to pending. No email was sent." };
+}
+
 export async function resendRegistrationEmailAction(registrationId: string) {
   await requireAdminUser();
   const supabase = await createClient();

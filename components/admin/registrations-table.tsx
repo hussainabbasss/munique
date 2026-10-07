@@ -5,6 +5,7 @@ import {
   confirmPaymentAction,
   rejectPaymentAction,
   resendRegistrationEmailAction,
+  restorePaymentAction,
 } from "@/lib/admin/actions/registrations";
 import { RegistrationProfileDialog } from "@/components/admin/registration-profile-dialog";
 import { formatDate } from "@/lib/utils/format";
@@ -53,7 +54,11 @@ function paymentLabel(status: string) {
 
 export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = registrations.find((r) => r.id === selectedId) ?? null;
+  // A restored row leaves a "Rejected" filtered list; keep it so it can still be confirmed
+  const [restoredRow, setRestoredRow] = useState<RegistrationRow | null>(null);
+  const selected =
+    registrations.find((r) => r.id === selectedId) ??
+    (restoredRow?.id === selectedId ? restoredRow : null);
 
   const [confirmState, confirmAction, confirming] = useActionState(
     async (_prev: { success?: string; error?: string } | null, formData: FormData) => {
@@ -69,6 +74,19 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
       const id = String(formData.get("registration_id"));
       const result = await rejectPaymentAction(id);
       if (result.success) setSelectedId(null);
+      return result;
+    },
+    null,
+  );
+  // Stays open after restoring so Confirm payment shows straight away
+  const [restoreState, restoreAction, restoring] = useActionState(
+    async (_prev: { success?: string; error?: string } | null, formData: FormData) => {
+      const id = String(formData.get("registration_id"));
+      const result = await restorePaymentAction(id);
+      const row = registrations.find((r) => r.id === id);
+      if (result.success && row) {
+        setRestoredRow({ ...row, payment_status: "pending" });
+      }
       return result;
     },
     null,
@@ -163,6 +181,7 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
         paymentProofUrl={
           selected ? paymentProofUrls[selected.id] ?? null : null
         }
+        paymentStatus={selected?.payment_status}
         footer={
           selected ? (
             <div className="admin-profile-footer">
@@ -210,6 +229,37 @@ export function RegistrationsTable({ registrations, paymentProofUrls }: Props) {
                       {resendState.error}
                     </span>
                   )}
+                </form>
+              )}
+
+              {restoreState?.success && (
+                <p className="admin-toast admin-toast-success">
+                  {restoreState.success}
+                </p>
+              )}
+              {restoreState?.error && (
+                <p className="admin-toast admin-toast-error">
+                  {restoreState.error}
+                </p>
+              )}
+
+              {selected.payment_status === "rejected" && (
+                <form action={restoreAction} className="admin-actions">
+                  <input
+                    type="hidden"
+                    name="registration_id"
+                    value={selected.id}
+                  />
+                  <button
+                    type="submit"
+                    className="btn-admin-primary"
+                    disabled={restoring}
+                  >
+                    {restoring ? "Restoring…" : "Restore registration"}
+                  </button>
+                  <span className="admin-field-hint">
+                    Moves it back to pending. No email is sent.
+                  </span>
                 </form>
               )}
 

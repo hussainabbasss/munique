@@ -10,6 +10,8 @@ type Props = {
   focusDelegateId?: string | null;
   onClose: () => void;
   paymentProofUrl?: string | null;
+  /** Live status from the list, so a change made while open shows at once */
+  paymentStatus?: string;
   footer?: ReactNode;
 };
 
@@ -31,6 +33,7 @@ export function RegistrationProfileDialog({
   focusDelegateId = null,
   onClose,
   paymentProofUrl = null,
+  paymentStatus,
   footer,
 }: Props) {
   const [profile, setProfile] = useState<RegistrationProfile | null>(null);
@@ -139,7 +142,7 @@ export function RegistrationProfileDialog({
                 </div>
                 <div>
                   <dt>Payment</dt>
-                  <dd>{paymentLabel(profile.payment_status)}</dd>
+                  <dd>{paymentLabel(paymentStatus ?? profile.payment_status)}</dd>
                 </div>
                 <div>
                   <dt>Registered</dt>
