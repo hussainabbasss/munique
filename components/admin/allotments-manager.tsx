@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import {
   changeIssuedAllotmentAction,
   issueAllotmentsAction,
+  sendDelegationToHeadAction,
   runMeritEngineAction,
   saveAllotmentOverrideAction,
 } from "@/lib/admin/actions/allotments";
@@ -105,6 +106,9 @@ export function AllotmentsManager({
   const [editCommitteeId, setEditCommitteeId] = useState("");
   const [editCountry, setEditCountry] = useState("");
   const [showIssueModal, setShowIssueModal] = useState(false);
+  // Send one delegation's allotments to its head delegate
+  const [headPick, setHeadPick] = useState("");
+  const [headConfirm, setHeadConfirm] = useState(false);
   const [profileTarget, setProfileTarget] = useState<ProfileTarget | null>(
     null,
   );
@@ -122,6 +126,19 @@ export function AllotmentsManager({
     async () => {
       const result = await issueAllotmentsAction();
       if (result.success) setShowIssueModal(false);
+      return result;
+    },
+    null,
+  );
+  const [headState, headAction, sendingHead] = useActionState(
+    async (_prev: { success?: string; error?: string } | null, formData: FormData) => {
+      const result = await sendDelegationToHeadAction(
+        String(formData.get("registration_uuid") ?? ""),
+      );
+      if (result.success) {
+        setHeadConfirm(false);
+        setHeadPick("");
+      }
       return result;
     },
     null,
@@ -208,6 +225,72 @@ export function AllotmentsManager({
       allotments.filter((row) => row.registrations?.type === "delegation").length,
     [allotments],
   );
+
+  // Confirmed delegations, with every member (allotted or still awaiting)
+  const delegationsForHead = useMemo(() => {
+    type Member = {
+      id: string;
+      name: string;
+      isHead: boolean;
+      email: string | null;
+      committee: string | null;
+      country: string | null;
+    };
+    const map = new Map<
+      string,
+      { uuid: string; code: string; school: string; members: Member[] }
+    >();
+    for (const row of allotments) {
+      const reg = row.registrations;
+      if (reg?.type !== "delegation" || reg.payment_status !== "confirmed") continue;
+      const entry = map.get(row.registration_id) ?? {
+        uuid: row.registration_id,
+        code: reg.registration_id,
+        school: reg.school,
+        members: [],
+      };
+      entry.members.push({
+        id: row.delegate_id,
+        name: row.delegates?.full_name ?? "—",
+        isHead: Boolean(row.delegates?.is_head_delegate),
+        email: row.delegates?.email ?? null,
+        committee: row.committees?.name ?? null,
+        country: row.country,
+      });
+      map.set(row.registration_id, entry);
+    }
+    for (const row of awaiting) {
+      if (row.type !== "delegation") continue;
+      const entry = map.get(row.registrationUuid) ?? {
+        uuid: row.registrationUuid,
+        code: row.registration_id,
+        school: row.school,
+        members: [],
+      };
+      entry.members.push({
+        id: row.delegate.id,
+        name: row.delegate.full_name,
+        isHead: row.delegate.is_head_delegate,
+        email: row.delegate.email,
+        committee: null,
+        country: null,
+      });
+      map.set(row.registrationUuid, entry);
+    }
+    return [...map.values()]
+      .map((d) => ({
+        ...d,
+        members: d.members.sort((a, b) => Number(b.isHead) - Number(a.isHead)),
+      }))
+      .sort((a, b) => (a.school || a.code).localeCompare(b.school || b.code));
+  }, [allotments, awaiting]);
+
+  const headDelegation =
+    delegationsForHead.find((d) => d.uuid === headPick) ?? null;
+  const headIncomplete =
+    headDelegation?.members.filter((m) => !m.committee || !m.country) ?? [];
+  const headRecipient =
+    headDelegation?.members.find((m) => m.isHead)?.email ?? null;
 
   const canIssueNow =
     canIssue && pendingEmailCount > 0 && incompletePendingCount === 0;
@@ -410,6 +493,12 @@ export function AllotmentsManager({
       {issueState?.error && (
         <p className="admin-toast admin-toast-error">{issueState.error}</p>
       )}
+      {headState?.success && (
+        <p className="admin-toast admin-toast-success">{headState.success}</p>
+      )}
+      {headState?.error && !headConfirm && (
+        <p className="admin-toast admin-toast-error">{headState.error}</p>
+      )}
       {changeState?.success && (
         <p className="admin-toast admin-toast-success">{changeState.success}</p>
       )}
@@ -448,6 +537,42 @@ export function AllotmentsManager({
               </li>
             )}
           </ul>
+        </section>
+      )}
+
+      {canIssue && typeTab === "delegation" && delegationsForHead.length > 0 && (
+        <section className="admin-allotment-awaiting">
+          <div className="admin-allotment-awaiting-head">
+            <h2 className="admin-allotment-awaiting-title">
+              Send to head delegate
+            </h2>
+            <p className="admin-field-hint">
+              Email one delegation&apos;s full allotment list and MUN code to its
+              head delegate, and mark every member as allotted.
+            </p>
+          </div>
+          <div className="admin-actions">
+            <select
+              value={headPick}
+              onChange={(e) => setHeadPick(e.target.value)}
+              aria-label="Delegation"
+            >
+              <option value="">Choose a delegation…</option>
+              {delegationsForHead.map((d) => (
+                <option key={d.uuid} value={d.uuid}>
+                  {`${d.school ? `${d.school} — ${d.code}` : d.code} (${d.members.length})`}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn-admin-primary"
+              disabled={!headDelegation}
+              onClick={() => setHeadConfirm(true)}
+            >
+              Send to head delegate
+            </button>
+          </div>
         </section>
       )}
 
@@ -874,6 +999,87 @@ export function AllotmentsManager({
                   </div>
                 </>
               )}
+            </form>
+          </div>
+        </>
+      )}
+
+      {headConfirm && headDelegation && (
+        <>
+          <div
+            className="admin-modal-backdrop"
+            onClick={() => setHeadConfirm(false)}
+          />
+          <div className="admin-modal" role="alertdialog">
+            <h2 className="admin-modal-title">Send to head delegate</h2>
+            <p className="admin-modal-body">
+              <strong>{headDelegation.school || headDelegation.code}</strong>{" "}
+              <span className="mono">{headDelegation.code}</span> — one email to{" "}
+              <strong>{headRecipient ?? "the registration email"}</strong> with
+              these allotments:
+            </p>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Delegate</th>
+                    <th>Committee</th>
+                    <th>Country</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {headDelegation.members.map((m) => (
+                    <tr key={m.id}>
+                      <td>
+                        {m.name}
+                        {m.isHead ? " (head)" : ""}
+                      </td>
+                      <td>{m.committee ?? "—"}</td>
+                      <td>{m.country ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ul className="admin-allotment-issue-breakdown">
+              {headIncomplete.length > 0 ? (
+                <li>
+                  Allot everyone first — missing committee or country for{" "}
+                  {headIncomplete.map((m) => m.name).join(", ")}.
+                </li>
+              ) : (
+                <>
+                  <li>
+                    All {headDelegation.members.length} members are marked as
+                    allotted and emailed.
+                  </li>
+                  <li>Members with their own email do not get a separate email.</li>
+                </>
+              )}
+            </ul>
+            {headState?.error && (
+              <p className="admin-toast admin-toast-error">{headState.error}</p>
+            )}
+            <form action={headAction} className="admin-actions">
+              <input
+                type="hidden"
+                name="registration_uuid"
+                value={headDelegation.uuid}
+              />
+              <button
+                type="submit"
+                className="btn-admin-primary"
+                disabled={sendingHead || headIncomplete.length > 0}
+              >
+                {sendingHead ? "Sending…" : "Send and mark allotted"}
+              </button>
+              <button
+                type="button"
+                className="btn-admin-secondary"
+                onClick={() => setHeadConfirm(false)}
+              >
+                Cancel
+              </button>
             </form>
           </div>
         </>

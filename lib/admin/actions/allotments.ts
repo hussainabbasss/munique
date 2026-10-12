@@ -662,3 +662,120 @@ export async function issueAllotmentsAction() {
         : `Sent ${emailsSent} allotment emails.`) + headNote,
   };
 }
+
+/**
+ * Send one delegation's full allotment list (with MUN code) to its head
+ * delegate, then mark every member issued and emailed. Members with their own
+ * email get no separate email — the head's copy covers the whole delegation.
+ */
+export async function sendDelegationToHeadAction(registrationUuid: string) {
+  const admin = await requireAdminRole();
+  if (!registrationUuid) return { error: "Choose a delegation." };
+
+  const supabase = await createClient();
+  const [{ data: reg, error: regError }, { data: allotments, error: allotError }] =
+    await Promise.all([
+      supabase
+        .from("registrations")
+        .select(
+          "id, registration_id, type, school, head_email, payment_status, delegates(id, full_name, email, is_head_delegate, display_order)",
+        )
+        .eq("id", registrationUuid)
+        .maybeSingle(),
+      supabase
+        .from("allotments")
+        .select("id, delegate_id, country, committee_id, status, committees(name)")
+        .eq("registration_id", registrationUuid),
+    ]);
+
+  if (regError) return { error: regError.message };
+  if (allotError) return { error: allotError.message };
+  if (!reg || reg.type !== "delegation") return { error: "Delegation not found." };
+  if (reg.payment_status !== "confirmed") {
+    return { error: "Payment is not confirmed for this delegation — nothing was sent." };
+  }
+
+  const members = [...(reg.delegates ?? [])].sort(
+    (a, b) => a.display_order - b.display_order,
+  );
+  if (!members.length) return { error: "This delegation has no delegates." };
+
+  const byDelegate = new Map(
+    (allotments ?? []).map((a) => [a.delegate_id as string, a]),
+  );
+  const incomplete = members.filter((d) => {
+    const a = byDelegate.get(d.id);
+    return !a?.country || !a?.committee_id;
+  });
+  if (incomplete.length) {
+    return {
+      error: `Allot everyone first — no committee and country yet for: ${incomplete
+        .map((d) => d.full_name)
+        .join(", ")}. Nothing was sent.`,
+    };
+  }
+
+  const to = members.find((d) => d.is_head_delegate)?.email || reg.head_email;
+  if (!to) return { error: "No head delegate email on file." };
+
+  const result = await sendDelegationAllotmentsToHead({
+    to,
+    registrationId: reg.registration_id,
+    delegationName: reg.school || reg.registration_id,
+    members: members.map((d) => {
+      const a = byDelegate.get(d.id);
+      return {
+        name: d.full_name,
+        committee:
+          (a?.committees as unknown as { name: string } | null)?.name ?? null,
+        country: a?.country ?? null,
+        hasOwnEmail: Boolean(d.email),
+      };
+    }),
+  });
+
+  if (!result.ok) {
+    console.error("[allotments] send to head failed", {
+      registrationId: reg.registration_id,
+      error: result.error,
+    });
+    return { error: `Email to ${to} failed (${result.error}) — nothing was marked.` };
+  }
+
+  const now = new Date().toISOString();
+  await supabase
+    .from("delegates")
+    .update({ allotment_email_sent_at: now })
+    .in(
+      "id",
+      members.map((d) => d.id),
+    );
+
+  let newlyIssued = 0;
+  for (const d of members) {
+    const a = byDelegate.get(d.id)!;
+    await supabase
+      .from("allotments")
+      .update(
+        a.status === "pending"
+          ? {
+              status: "issued",
+              issued_at: now,
+              issued_by: admin.id,
+              allotment_email_sent_at: now,
+            }
+          : { allotment_email_sent_at: now },
+      )
+      .eq("id", a.id);
+    if (a.status === "pending") newlyIssued++;
+  }
+
+  revalidatePath("/admin/allotments");
+  revalidatePath("/admin/countries");
+
+  return {
+    success: `Sent ${members.length} allotments for ${reg.school || reg.registration_id} (${reg.registration_id}) to ${to}. Everyone is marked as allotted${
+      newlyIssued ? ` (${newlyIssued} newly issued)` : ""
+    }.`,
+  };
+}
