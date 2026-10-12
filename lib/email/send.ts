@@ -200,3 +200,68 @@ export async function sendDelegationAllotmentIssued(params: {
     html,
   });
 }
+
+/**
+ * One email to the head delegate with every member's allotment, sent when some
+ * members of the delegation have no email of their own.
+ */
+export async function sendDelegationAllotmentsToHead(params: {
+  to: string;
+  registrationId: string;
+  delegationName: string;
+  members: {
+    name: string;
+    committee: string | null;
+    country: string | null;
+    hasOwnEmail: boolean;
+  }[];
+}): Promise<EmailResult> {
+  return sendEmail({
+    kind: "sendDelegationAllotmentsToHead",
+    to: params.to,
+    subject: `Your delegation's allotments (${params.registrationId}) — Munique 2026`,
+    html: delegationAllotmentsToHeadHtml(params),
+  });
+}
+
+export function delegationAllotmentsToHeadHtml(params: {
+  registrationId: string;
+  delegationName: string;
+  members: {
+    name: string;
+    committee: string | null;
+    country: string | null;
+    hasOwnEmail: boolean;
+  }[];
+}) {
+  const cell = "padding: 0.375rem 0.5rem; border-bottom: 1px solid #E3DED2; text-align: left;";
+  const rows = params.members
+    .map(
+      (m) => `<tr>
+        <td style="${cell}">${escapeHtml(m.name)}${m.hasOwnEmail ? "" : " *"}</td>
+        <td style="${cell}">${escapeHtml(m.committee ?? "To be announced")}</td>
+        <td style="${cell}">${escapeHtml(m.country ?? "To be announced")}</td>
+      </tr>`,
+    )
+    .join("");
+  const anyWithout = params.members.some((m) => !m.hasOwnEmail);
+
+  return baseHtml(`
+    <p>Your delegation&apos;s allotments have been issued.</p>
+    <p>Delegation: <strong>${escapeHtml(params.delegationName)}</strong><br>
+    MUN code: <strong style="font-family: monospace;">${escapeHtml(params.registrationId)}</strong></p>
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.9375rem;">
+      <thead><tr>
+        <th style="${cell}">Delegate</th>
+        <th style="${cell}">Committee</th>
+        <th style="${cell}">Country</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${
+      anyWithout
+        ? `<p style="font-size: 0.875rem;">* No email on file for this delegate — please pass their allotment on to them.</p>`
+        : ""
+    }
+  `);
+}

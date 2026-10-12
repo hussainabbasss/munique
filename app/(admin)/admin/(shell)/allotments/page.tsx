@@ -2,7 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { AllotmentsManager } from "@/components/admin/allotments-manager";
 import { FormImportPanel } from "@/components/admin/form-import-panel";
 import { getAdminUser } from "@/lib/admin/helpers";
-import { countPendingAllotmentEmails } from "@/lib/allotments/pending-email";
+import {
+  awaitsHeadSummary,
+  countPendingAllotmentEmails,
+} from "@/lib/allotments/pending-email";
 
 type DelegateRow = {
   id: string;
@@ -71,6 +74,8 @@ export default async function AllotmentsPage() {
   let incompletePendingCount = 0;
   let pendingDelegateEmails = 0;
   let pendingDelegationEmails = 0;
+  // One summary email per delegation whose no-email members are still untold
+  const headSummaries = new Map<string, string>();
 
   for (const allotment of allotments ?? []) {
     const reg = allotment.registrations as RegistrationSummary | null;
@@ -90,6 +95,13 @@ export default async function AllotmentsPage() {
     );
     pendingEmailCount += emailCount;
 
+    if (reg && awaitsHeadSummary(reg, Boolean(allotment.country), delegate)) {
+      headSummaries.set(
+        allotment.registration_id,
+        reg.school ? `${reg.school} (${reg.registration_id})` : reg.registration_id,
+      );
+    }
+
     if (emailCount > 0 && reg) {
       if (reg.type === "delegation") {
         pendingDelegationEmails += emailCount;
@@ -98,6 +110,8 @@ export default async function AllotmentsPage() {
       }
     }
   }
+
+  pendingEmailCount += headSummaries.size;
 
   return (
     <section className="admin-panel">
@@ -119,6 +133,7 @@ export default async function AllotmentsPage() {
         incompletePendingCount={incompletePendingCount}
         pendingDelegateEmails={pendingDelegateEmails}
         pendingDelegationEmails={pendingDelegationEmails}
+        headSummaryDelegations={[...headSummaries.values()]}
         canIssue={admin?.role === "admin"}
       />
     </section>

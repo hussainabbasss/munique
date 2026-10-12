@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { seatKey } from "@/lib/allotments/countries";
 import { assignSeats, scoreMerit, type EnginePerson } from "@/lib/allotments/batch-engine";
-import { sendAllotmentChanged, sendAllotmentIssued } from "@/lib/email/send";
+import {
+  sendAllotmentChanged,
+  sendAllotmentIssued,
+  sendDelegationAllotmentsToHead,
+} from "@/lib/email/send";
 import { requireAdminRole, requireAdminUser } from "@/lib/admin/helpers";
 
 export async function runMeritEngineAction(formData?: FormData) {
@@ -477,6 +481,12 @@ export async function issueAllotmentsAction() {
   let allotmentsNewlyIssued = 0;
   let skippedNoEmail = 0;
   let sendFailures = 0;
+  let headSummariesSent = 0;
+  // registration uuid → its no-email members still waiting to be told
+  const viaHead = new Map<
+    string,
+    { allotmentId: string; delegateId: string; status: string }[]
+  >();
 
   for (const allotment of eligible) {
     const delegate = allotment.delegates as unknown as {
@@ -490,7 +500,15 @@ export async function issueAllotmentsAction() {
     if (!delegate) continue;
     if (delegate.allotment_email_sent_at) continue;
     if (!delegate.email) {
-      skippedNoEmail++;
+      // Delegation members without email go in their head's summary below
+      const regType = (allotment.registrations as unknown as { type: string } | null)?.type;
+      if (regType === "delegation") {
+        const list = viaHead.get(allotment.registration_id) ?? [];
+        list.push({ allotmentId: allotment.id, delegateId: delegate.id, status: allotment.status });
+        viaHead.set(allotment.registration_id, list);
+      } else {
+        skippedNoEmail++;
+      }
       continue;
     }
 
@@ -535,6 +553,88 @@ export async function issueAllotmentsAction() {
     }
   }
 
+  if (viaHead.size > 0) {
+    const { data: delegations } = await supabase
+      .from("registrations")
+      .select(
+        "id, registration_id, school, head_email, delegates(id, full_name, email, is_head_delegate, display_order)",
+      )
+      .in("id", [...viaHead.keys()]);
+
+    const allotmentByDelegate = new Map(
+      eligible.map((a) => [
+        a.delegate_id as string,
+        {
+          country: a.country as string | null,
+          committee:
+            (a.committees as unknown as { name: string } | null)?.name ?? null,
+        },
+      ]),
+    );
+
+    for (const reg of delegations ?? []) {
+      const pending = viaHead.get(reg.id) ?? [];
+      const members = [...(reg.delegates ?? [])].sort(
+        (a, b) => a.display_order - b.display_order,
+      );
+      const to =
+        members.find((d) => d.is_head_delegate)?.email || reg.head_email;
+      if (!to) {
+        skippedNoEmail += pending.length;
+        continue;
+      }
+
+      const result = await sendDelegationAllotmentsToHead({
+        to,
+        registrationId: reg.registration_id,
+        delegationName: reg.school || reg.registration_id,
+        members: members.map((d) => ({
+          name: d.full_name,
+          committee: allotmentByDelegate.get(d.id)?.committee ?? null,
+          country: allotmentByDelegate.get(d.id)?.country ?? null,
+          hasOwnEmail: Boolean(d.email),
+        })),
+      });
+
+      if (!result.ok) {
+        sendFailures++;
+        console.error("[allotments] head summary email failed", {
+          registrationId: reg.registration_id,
+          error: result.error,
+        });
+        continue;
+      }
+
+      emailsSent++;
+      headSummariesSent++;
+
+      await supabase
+        .from("delegates")
+        .update({ allotment_email_sent_at: now })
+        .in(
+          "id",
+          pending.map((p) => p.delegateId),
+        );
+
+      for (const p of pending) {
+        await supabase
+          .from("allotments")
+          .update(
+            p.status === "pending"
+              ? {
+                  status: "issued",
+                  issued_at: now,
+                  issued_by: admin.id,
+                  allotment_email_sent_at: now,
+                }
+              : { allotment_email_sent_at: now },
+          )
+          .eq("id", p.allotmentId);
+        if (p.status === "pending") allotmentsNewlyIssued++;
+      }
+    }
+  }
+
   if (emailsSent === 0) {
     if (sendFailures > 0) {
       return {
@@ -551,10 +651,14 @@ export async function issueAllotmentsAction() {
 
   revalidatePath("/admin/allotments");
   revalidatePath("/admin/countries");
+  const headNote =
+    headSummariesSent > 0
+      ? ` ${headSummariesSent} of them went to head delegates for members without email.`
+      : "";
   return {
     success:
-      allotmentsNewlyIssued > 0
+      (allotmentsNewlyIssued > 0
         ? `Issued ${allotmentsNewlyIssued} allotments. ${emailsSent} emails sent.`
-        : `Sent ${emailsSent} allotment emails.`,
+        : `Sent ${emailsSent} allotment emails.`) + headNote,
   };
 }

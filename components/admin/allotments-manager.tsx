@@ -79,6 +79,8 @@ type Props = {
   incompletePendingCount: number;
   pendingDelegateEmails: number;
   pendingDelegationEmails: number;
+  /** Delegations whose head gets one summary for members without email */
+  headSummaryDelegations: string[];
   canIssue: boolean;
 };
 
@@ -90,6 +92,7 @@ export function AllotmentsManager({
   incompletePendingCount,
   pendingDelegateEmails,
   pendingDelegationEmails,
+  headSummaryDelegations,
   canIssue,
 }: Props) {
   const [typeTab, setTypeTab] = useState<TypeTab>("delegate");
@@ -893,6 +896,14 @@ export function AllotmentsManager({
             <ul className="admin-allotment-issue-breakdown">
               <li>{pendingDelegateEmails} individual delegate emails</li>
               <li>{pendingDelegationEmails} delegation member emails</li>
+              {headSummaryDelegations.length > 0 && (
+                <li>
+                  {headSummaryDelegations.length} head delegate summary
+                  {headSummaryDelegations.length === 1 ? "" : " emails"} with the
+                  whole delegation&apos;s allotments and MUN code, for members
+                  without an email: {headSummaryDelegations.join(", ")}
+                </li>
+              )}
             </ul>
             <form action={issueAction} className="admin-actions">
               <button type="submit" className="btn-admin-primary" disabled={issuing}>
